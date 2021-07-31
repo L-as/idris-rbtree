@@ -1,0 +1,3 @@
+package rbtree
+
+modules = Data.RBTree

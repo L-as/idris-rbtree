@@ -36,22 +36,22 @@ transitiveIn f g p1 l p2 = ?transitiveInHole
 
 --inFilterHelper : (x : a) ->jk (p1 : f x = True) -> (p2 : In f xs)
 
+-- https://github.com/idris-lang/Idris2/issues/1809
 filter' : (a -> Bool) -> List a -> List a
 filter' f Nil = Nil
-filter' f (x :: xs) = if f x then x :: filter' f xs else filter' f xs
+filter' f (x :: xs) = ifThenElse (f x) (x :: filter' f xs) (filter' f xs)
 
-inFilter : (f : a -> Bool) -> (l : List a) -> In f l -> In f (filter f l)
+inFilter : (f : a -> Bool) -> (l : List a) -> In f l -> In f (filter' f l)
 inFilter f [] p impossible
-inFilter f (x :: xs) (MkIn x p xs) = rewrite p in MkIn x p (filter f xs)
-inFilter f (x :: xs) (MkInCons x xs p) = the (In f (filter f (x :: xs))) ?haa
-	--let r = inFilter f xs p in
-  --the (In f (if f x then x :: filter f xs else filter f xs)) (?haa r)
-	--case boolMatch (f x) of
-	--	Left p' => ?haa $ MkInCons x (filter f xs) r
-	--	Right p' => ?hac r
-inFilter f l p = ?hab
+inFilter f (x :: xs) (MkIn x p xs) = rewrite p in MkIn x p (filter' f xs)
+inFilter f (x :: xs) (MkInCons x xs p) = --the (In f (filter' f (x :: xs))) ?haa
+	let r = inFilter f xs p in
+  --the (In f (ifThenElse (f x) (x :: filter' f xs) (filter' f xs))) (?haa r)
+	case boolMatch (f x) of
+		Left p' => replace {p = \b => In f (ifThenElse b (x :: filter' f xs) (filter' f xs))} (sym p') $ MkInCons x (filter' f xs) r
+		Right p' => replace {p = \b => In f (ifThenElse b (x :: filter' f xs) (filter' f xs))} (sym p') r
 
-helper : (f : a -> Bool) -> (g : a -> Bool) -> ((x : a) -> (g x = True) -> f x = True) -> (l : List a) -> In g l -> In g (filter f l)
+helper : (f : a -> Bool) -> (g : a -> Bool) -> ((x : a) -> (g x = True) -> f x = True) -> (l : List a) -> In g l -> In g (filter' f l)
 helper f g p1 l p2 = ?helperHole
 
 eq' : Ord a => a -> a -> Bool
@@ -73,18 +73,18 @@ data Color = Red | Black
 
 data GoodTree : {height : Nat} -> {color : Color} -> {kt : Type} -> {kord : Ord kt} -> {keys : List kt} -> {vt : Type} -> Type where
 	Empty : GoodTree {height = 0, color = Black, keys = []}
-	RedNode : {0 kord : Ord kt} -> (k : kt) -> {0 kp : In (k `eq'`) keys} -> vt -> GoodTree {height, color = Black, kt, kord, keys = filter (k `lt'`) keys, vt} -> GoodTree {height, color = Black, kt, kord, keys = filter (k `gt'`) keys, vt} -> GoodTree {height, color = Red, kt, kord, keys, vt}
-	BlackNode : {0 kord : Ord kt} -> (k : kt) -> {0 kp : In (k `eq'`) keys} -> vt -> GoodTree {height, kt, kord, keys = filter (k `lt'`) keys, vt} -> GoodTree {height, kt, kord, keys = filter (k `gt'`) keys, vt} -> GoodTree {height = S height, color = Black, kt, kord, keys, vt}
+	RedNode : {0 kord : Ord kt} -> (k : kt) -> {0 kp : In (k `eq'`) keys} -> vt -> GoodTree {height, color = Black, kt, kord, keys = filter' (k `lt'`) keys, vt} -> GoodTree {height, color = Black, kt, kord, keys = filter' (k `gt'`) keys, vt} -> GoodTree {height, color = Red, kt, kord, keys, vt}
+	BlackNode : {0 kord : Ord kt} -> (k : kt) -> {0 kp : In (k `eq'`) keys} -> vt -> GoodTree {height, kt, kord, keys = filter' (k `lt'`) keys, vt} -> GoodTree {height, kt, kord, keys = filter' (k `gt'`) keys, vt} -> GoodTree {height = S height, color = Black, kt, kord, keys, vt}
 
 index : {0 keys : List kt} -> {kord : Ord kt} -> (k : kt) -> {0 k_in_keys : In (k `eq'`) keys} -> GoodTree {kt, kord, keys, vt} -> vt
 index k Empty impossible
 index k (RedNode k' v l r) = case compare k k' of
 	EQ => v
 	LT =>
-	  let 0 p : In (k `eq'`) (filter (k' `lt'`) keys) = helper (k' `lt'`) (k `eq'`) ?hha keys k_in_keys in
+	  let 0 p : In (k `eq'`) (filter' (k' `lt'`) keys) = helper (k' `lt'`) (k `eq'`) ?hha keys k_in_keys in
     index k l {k_in_keys = p}
 	GT =>
-	  let 0 p : In (k `eq'`) (filter (k' `gt'`) keys) = helper (k' `gt'`) (k `eq'`) ?hhb keys k_in_keys in
+	  let 0 p : In (k `eq'`) (filter' (k' `gt'`) keys) = helper (k' `gt'`) (k `eq'`) ?hhb keys k_in_keys in
     index k r {k_in_keys = p}
 index _ _ = ?indexHole
 

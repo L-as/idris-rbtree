@@ -62,6 +62,10 @@ interface LawfulOrd a where
   equality1 : (x : a) -> (y : a) -> (z : a) -> (compare x y = EQ) -> (compare x z = compare y z)
   equality2 : (x : a) -> (y : a) -> (z : a) -> (compare x y = EQ) -> (compare z x = compare z y)
 
+export
+interface LawfulOrd a => LawfullerOrd a where
+  realEquality : (x : a) -> (y : a) -> (compare x y = EQ) -> (x = y)
+
 (==) : LawfulOrd a => a -> a -> Bool
 x == y = case compare x y of { EQ => True; _ => False }
 
@@ -104,8 +108,22 @@ data Color = Red | Black
 
 data GoodTree : {height : Nat} -> {color : Color} -> {kt : Type} -> {kord : LawfulOrd kt} -> {keys : List kt} -> {vt : kt -> Type} -> Type where
   Empty : GoodTree {height = 0, color = Black, keys = []}
-  RedNode : {0 kord : LawfulOrd kt} -> (k : kt) -> {0 kp : In (k ==) keys} -> vt k -> GoodTree {height, color = Black, kt, kord, keys = filter (k >) keys, vt} -> GoodTree {height, color = Black, kt, kord, keys = filter (k <) keys, vt} -> GoodTree {height, color = Red, kt, kord, keys, vt}
-  BlackNode : {0 kord : LawfulOrd kt} -> (k : kt) -> {0 kp : In (k ==) keys} -> vt k -> GoodTree {height, kt, kord, keys = filter (k >) keys, vt} -> GoodTree {height, kt, kord, keys = filter (k <) keys, vt} -> GoodTree {height = S height, color = Black, kt, kord, keys, vt}
+  RedNode :
+    {0 kord : LawfulOrd kt} ->
+    (k : kt) ->
+    {0 kp : In (k ==) keys} ->
+    vt k ->
+    GoodTree {height, color = Black, kt, kord, keys = filter (k >) keys, vt} ->
+    GoodTree {height, color = Black, kt, kord, keys = filter (k <) keys, vt} ->
+    GoodTree {height, color = Red, kt, kord, keys, vt}
+  BlackNode :
+    {0 kord : LawfulOrd kt} ->
+    (k : kt) ->
+    {0 kp : In (k ==) keys} ->
+    vt k ->
+    GoodTree {height, kt, kord, keys = filter (k >) keys, vt} ->
+    GoodTree {height, kt, kord, keys = filter (k <) keys, vt} ->
+    GoodTree {height = S height, color = Black, kt, kord, keys, vt}
 
 data OrderingEq : Ordering -> Type where
   LTEquality : (0 _ : x = LT) -> OrderingEq x
@@ -118,84 +136,76 @@ orderingMatch LT = LTEquality Refl
 orderingMatch EQ = EQEquality Refl
 orderingMatch GT = GTEquality Refl
 
-index : {0 keys : List kt} -> {kord : LawfulOrd kt} -> (k : kt) -> {0 k_in_keys : In (k ==) keys} -> GoodTree {kt, kord, keys, vt} -> Exists $ \k' => Exists $ \_ : compare k' k = EQ => vt k'
-index k Empty impossible
-index k (RedNode k' v l r) = case orderingMatch (compare k' k) of
+indexG : {0 keys : List kt} -> {kord : LawfulOrd kt} -> (k : kt) -> {0 k_in_keys : In (k ==) keys} -> GoodTree {kt, kord, keys, vt} -> Exists $ \k' => Exists $ \_ : compare k' k = EQ => vt k'
+indexG k Empty impossible
+indexG k (RedNode k' v l r) = case orderingMatch (compare k' k) of
   EQEquality p0 => Evidence k' $ Evidence p0 v
   GTEquality p0 =>
     let 0 p1 = \x, p => helper k' k x (cong (\x => case x of {GT => True; _ => False}) p0) p in
     let 0 p2 : In (k ==) (filter (k' >) keys) = inFilter' (k' >) (k ==) p1 keys k_in_keys in
-    index k l {k_in_keys = p2}
+    indexG k l {k_in_keys = p2}
   LTEquality p0 =>
     let 0 p1 = \x, p => ( let p1' = replace {p = \arg => arg = LT} (equality2 k x k' (convEQ k x p)) p0 in let p1'' = cong (\arg => case arg of {LT => True; _ => False}) p1' in the (k' < x = True) p1'' ) in
     let 0 p2 : In (k ==) (filter (k' <) keys) = inFilter' (k' <) (k ==) p1 keys k_in_keys in
-    index k r {k_in_keys = p2}
-index k (BlackNode k' v l r) = case orderingMatch (compare k' k) of
+    indexG k r {k_in_keys = p2}
+indexG k (BlackNode k' v l r) = case orderingMatch (compare k' k) of
   EQEquality p0 => Evidence k' $ Evidence p0 v
   GTEquality p0 =>
     let 0 p1 = \x, p => helper k' k x (cong (\x => case x of {GT => True; _ => False}) p0) p in
     let 0 p2 : In (k ==) (filter (k' >) keys) = inFilter' (k' >) (k ==) p1 keys k_in_keys in
-    index k l {k_in_keys = p2}
+    indexG k l {k_in_keys = p2}
   LTEquality p0 =>
     let 0 p1 = \x, p => ( let p1' = replace {p = \arg => arg = LT} (equality2 k x k' (convEQ k x p)) p0 in let p1'' = cong (\arg => case arg of {LT => True; _ => False}) p1' in the (k' < x = True) p1'' ) in
     let 0 p2 : In (k ==) (filter (k' <) keys) = inFilter' (k' <) (k ==) p1 keys k_in_keys in
-    index k r {k_in_keys = p2}
+    indexG k r {k_in_keys = p2}
 
-{-
-data BadTree : {height : Nat} -> {color : Color} -> {kt : Type} -> {kord : Ord kt} -> {keys : List kt} -> {vt : Type} -> Type where
+-- Like GoodTree but BadRedNode can have red children
+data BadTree : {height : Nat} -> {color : Color} -> {kt : Type} -> {kord : LawfulOrd kt} -> {keys : List kt} -> {vt : kt -> Type} -> Type where
   BadEmpty : BadTree {height = 0, color = Black, keys = []}
-  BadRedNode : {0 kord : Ord kt} -> (k : kt) -> vt -> GoodTree {height, kt, kord, keys = keys1, vt} -> {0 proof1 : all (k <) keys1 = True} -> GoodTree {height, kt, kord, keys = keys2, vt} -> {0 proof2 : all (k >) keys2 = True} -> BadTree {height, color = Red, kt, kord, keys = k :: keys1 <+> keys2, vt}
-  BadBlackNode : {0 kord : Ord kt} -> (k : kt) -> vt -> GoodTree {height, kt, kord, keys = keys1, vt} -> {0 proof1 : all (k <) keys1 = True} -> GoodTree {height, kt, kord, keys = keys2, vt} -> {0 proof2 : all (k >) keys2 = True} -> BadTree {height = S height, color = Black, kt, kord, keys = k :: keys1 <+> keys2, vt}
--}
+  BadRedNode : {0 kord : LawfulOrd kt} -> (k : kt) -> {0 kp : In (k ==) keys} -> vt k -> GoodTree {height, kt, kord, keys = filter (k >) keys, vt} -> GoodTree {height, color, kt, kord, keys = filter (k <) keys, vt} -> BadTree {height, color = Red, kt, kord, keys, vt}
+  BadBlackNode : {0 kord : LawfulOrd kt} -> (k : kt) -> {0 kp : In (k ==) keys} -> vt k -> GoodTree {height, kt, kord, keys = filter (k >) keys, vt} -> GoodTree {height, kt, kord, keys = filter (k <) keys, vt} -> BadTree {height = S height, color = Black, kt, kord, keys, vt}
 
-{-
-data GoodTree : {0 height : Nat} -> {0 color : Color} -> {0 kt : Type} -> {0 kord : Ord kt} -> {0 vt : Type} -> Type where
-  Empty : GoodTree {height = 0, color = Black}
-  RedNode : kt -> vt -> GoodTree {height, color = Black, kt, kord, vt} -> GoodTree {height, color = Black, kt, kord, vt} -> GoodTree {height, color = Red, kt, kord, vt}
-  BlackNode : kt -> vt -> GoodTree {height, kt, kord, vt} -> GoodTree {height, kt, kord, vt} -> GoodTree {height = S height, color = Black, kt, kord, vt}
+constructBlack :
+  (kord : LawfulOrd kt) =>
+  (k : kt) ->
+  vt k ->
+  GoodTree {height, kt, kord, vt, keys = keysl} ->
+  {0 pl : all (Data.RBTree.(>) k) keysl = True} ->
+  GoodTree {height, kt, kord, vt, keys = keysr} ->
+  {0 pr : all (Data.RBTree.(<) k) keysr = True} ->
+  GoodTree {height = S height, color = Black, kt, kord, vt, keys = keysl <+> (k :: keysr)}
+constructBlack = ?cb
 
-data BadTree : {0 height : Nat} -> {0 color : Color} -> {0 kt : Type} -> {0 kord : Ord kt} -> {0 vt : Type} -> Type where
-  BadEmpty : BadTree {height = 0, color = Black}
-  BadRedNode : kt -> vt -> GoodTree {height, kt, kord, vt} -> GoodTree {height, kt, kord, vt} -> BadTree {height, color = Red, kt, kord, vt}
-  BadBlackNode : kt -> vt -> GoodTree {height, kt, kord, vt} -> GoodTree {height, kt, kord, vt} -> BadTree {height = S height, color = Black, kt, kord, vt}
+balanceLeft : (kord : LawfulOrd kt) => (k : kt) -> vt k -> BadTree {height, kt, kord, vt, keys = keysl} -> {0 pl : all (Data.RBTree.(>) k) keysl = True} -> GoodTree {height, kt, kord, vt, keys = keysr} -> {0 pr : all (Data.RBTree.(<) k) keysr = True} -> Exists $ \color => GoodTree {height = S height, color, kt, kord, vt, keys = keysl <+> (k :: keysr)}
+balanceLeft {keysl = .([])} k v BadEmpty r = Evidence Black $ constructBlack k v Empty r {keysl = [], keysr, pl, pr}
+--balanceLeft k v (BadBlackNode k' v' l' r') r = Evidence Black $ BlackNode k v (BlackNode k' v' l' r' {keys = _}) r
+--balanceLeft zk zv (BadRedNode xk xv a (RedNode yk yv b c)) d = Evidence Red $ RedNode yk yv (BlackNode xk xv a b) (BlackNode zk zv c d)
+--balanceLeft zk zv (BadRedNode yk yv (RedNode xk xv a b) c) d = Evidence Red $ RedNode yk yv (BlackNode xk xv a b) (BlackNode zk zv c d)
+--balanceLeft xk xv (BadRedNode yk yv (BlackNode zk zv a b) (BlackNode wk wv c d)) e = Evidence Black $ BlackNode xk xv (RedNode yk yv (BlackNode zk zv a b) (BlackNode wk wv c d)) e
+--balanceLeft xk xv (BadRedNode yk yv Empty Empty) e = Evidence Black $ BlackNode xk xv (RedNode yk yv Empty Empty) e
+balanceLeft _ _ _ _ = ?dju
 
-balanceLeft : kt -> vt -> BadTree {height, kt, kord, vt} -> GoodTree {height, kt, kord, vt} -> Exists $ \color => GoodTree {height = S height, color, kt, kord, vt}
-balanceLeft k v BadEmpty r = Evidence Black $ BlackNode k v Empty r
-balanceLeft k v (BadBlackNode k' v' l' r') r = Evidence Black $ BlackNode k v (BlackNode k' v' l' r') r
-balanceLeft zk zv (BadRedNode xk xv a (RedNode yk yv b c)) d = Evidence Red $ RedNode yk yv (BlackNode xk xv a b) (BlackNode zk zv c d)
-balanceLeft zk zv (BadRedNode yk yv (RedNode xk xv a b) c) d = Evidence Red $ RedNode yk yv (BlackNode xk xv a b) (BlackNode zk zv c d)
-balanceLeft xk xv (BadRedNode yk yv (BlackNode zk zv a b) (BlackNode wk wv c d)) e = Evidence Black $ BlackNode xk xv (RedNode yk yv (BlackNode zk zv a b) (BlackNode wk wv c d)) e
-balanceLeft xk xv (BadRedNode yk yv Empty Empty) e = Evidence Black $ BlackNode xk xv (RedNode yk yv Empty Empty) e
-
-mutual
-  getf : (ko : Ord k) => k -> GoodTree n c k ko v -> Maybe v
-  getf key node =
-    case node of
-      Empty => Nothing
-      RedNode key' val l r => getf' key key' val l r
-      BlackNode key' val l r => getf' key key' val l r
-
-  getf' : (ko : Ord k) => k -> k -> v -> GoodTree n c1 k ko v -> GoodTree n c2 k ko v -> Maybe v
-  getf' key key' val l r = case compare key key' of
-    LT => getf key l
-    EQ => Just val
-    GT => getf key r
-
-insertf' : (ko : Ord k) => k -> v -> GoodTree n1 c1 k ko v -> Exists (\n2 => Exists (\c2 => BadTree n2 c2 k ko v))
-insertf' key val Empty = Evidence 1 $ Evidence Red (BadNode Red key val Empty Empty)
-insertf' key val (RedNode key' val' l r) = ?dd
-insertf' _ _ _ = ?inh
-
-Functor (GoodTree n c) where
-  map f Empty = Empty
-  map f (RedNode x l r) = RedNode (f x) (f <$> l) (f <$> r)
-  map f (BlackNode x l r) = BlackNode (f x) (f <$> l) (f <$> r)
+insert' : (kord : LawfulOrd kt) => (k : kt) -> vt k -> GoodTree {kt, kord, vt, keys} -> Exists \height => Exists \color => BadTree {height, color, kt, kord, vt, keys = k :: keys}
+--insert' key val Empty = Evidence 1 $ Evidence Red (BadNode Red key val Empty Empty)
+--insert' key val (RedNode key' val' l r) = ?dd
+insert' _ _ _ = ?inh
 
 export
-data Tree : Type -> Type where
-  MkTree : GoodTree height color a -> Tree a
+data Tree : (kt : Type) -> (kord : LawfulOrd kt) => (kt -> Type) -> Type where
+  MkTree : GoodTree {height, color, kt, kord, vt, keys} -> Tree kt vt {kord}
 
 export
-empty : Tree a
+empty : LawfulOrd kt => Tree kt vt
 empty = MkTree Empty
--}
+
+export
+insert : LawfulOrd kt => (k : kt) -> vt k -> Tree kt vt -> Tree kt vt
+insert = ?insertHole
+
+export
+index : LawfulOrd kt => kt -> Tree kt vt -> Maybe (Exists vt)
+index = ?indexHole
+
+export
+index' : LawfullerOrd kt => (k : kt) -> Tree kt vt -> Maybe (vt k)
+index' = ?indexHole'

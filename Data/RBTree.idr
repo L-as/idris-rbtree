@@ -1,7 +1,9 @@
 ||| Red black trees, adapted from Purely functional data structures by Chris Okasaki.
+|||
+||| You are guaranteed to get the correct value for a key.
+|||
 ||| TODO: Implement insertion.
 ||| TODO: Implement deletion.
-||| TODO: Prove that the correct values are fetched.
 module Data.RBTree
 
 import Data.Nat
@@ -100,10 +102,10 @@ helper x y z p1 p2 =
 
 data Color = Red | Black
 
-data GoodTree : {height : Nat} -> {color : Color} -> {kt : Type} -> {kord : LawfulOrd kt} -> {keys : List kt} -> {vt : Type} -> Type where
+data GoodTree : {height : Nat} -> {color : Color} -> {kt : Type} -> {kord : LawfulOrd kt} -> {keys : List kt} -> {vt : kt -> Type} -> Type where
   Empty : GoodTree {height = 0, color = Black, keys = []}
-  RedNode : {0 kord : LawfulOrd kt} -> (k : kt) -> {0 kp : In (k ==) keys} -> vt -> GoodTree {height, color = Black, kt, kord, keys = filter (k >) keys, vt} -> GoodTree {height, color = Black, kt, kord, keys = filter (k <) keys, vt} -> GoodTree {height, color = Red, kt, kord, keys, vt}
-  BlackNode : {0 kord : LawfulOrd kt} -> (k : kt) -> {0 kp : In (k ==) keys} -> vt -> GoodTree {height, kt, kord, keys = filter (k >) keys, vt} -> GoodTree {height, kt, kord, keys = filter (k <) keys, vt} -> GoodTree {height = S height, color = Black, kt, kord, keys, vt}
+  RedNode : {0 kord : LawfulOrd kt} -> (k : kt) -> {0 kp : In (k ==) keys} -> vt k -> GoodTree {height, color = Black, kt, kord, keys = filter (k >) keys, vt} -> GoodTree {height, color = Black, kt, kord, keys = filter (k <) keys, vt} -> GoodTree {height, color = Red, kt, kord, keys, vt}
+  BlackNode : {0 kord : LawfulOrd kt} -> (k : kt) -> {0 kp : In (k ==) keys} -> vt k -> GoodTree {height, kt, kord, keys = filter (k >) keys, vt} -> GoodTree {height, kt, kord, keys = filter (k <) keys, vt} -> GoodTree {height = S height, color = Black, kt, kord, keys, vt}
 
 data OrderingEq : Ordering -> Type where
   LTEquality : (0 _ : x = LT) -> OrderingEq x
@@ -116,10 +118,10 @@ orderingMatch LT = LTEquality Refl
 orderingMatch EQ = EQEquality Refl
 orderingMatch GT = GTEquality Refl
 
-index : {0 keys : List kt} -> {kord : LawfulOrd kt} -> (k : kt) -> {0 k_in_keys : In (k ==) keys} -> GoodTree {kt, kord, keys, vt} -> vt
+index : {0 keys : List kt} -> {kord : LawfulOrd kt} -> (k : kt) -> {0 k_in_keys : In (k ==) keys} -> GoodTree {kt, kord, keys, vt} -> Exists $ \k' => Exists $ \_ : compare k' k = EQ => vt k'
 index k Empty impossible
 index k (RedNode k' v l r) = case orderingMatch (compare k' k) of
-  EQEquality _ => v
+  EQEquality p0 => Evidence k' $ Evidence p0 v
   GTEquality p0 =>
     let 0 p1 = \x, p => helper k' k x (cong (\x => case x of {GT => True; _ => False}) p0) p in
     let 0 p2 : In (k ==) (filter (k' >) keys) = inFilter' (k' >) (k ==) p1 keys k_in_keys in
@@ -129,7 +131,7 @@ index k (RedNode k' v l r) = case orderingMatch (compare k' k) of
     let 0 p2 : In (k ==) (filter (k' <) keys) = inFilter' (k' <) (k ==) p1 keys k_in_keys in
     index k r {k_in_keys = p2}
 index k (BlackNode k' v l r) = case orderingMatch (compare k' k) of
-  EQEquality _ => v
+  EQEquality p0 => Evidence k' $ Evidence p0 v
   GTEquality p0 =>
     let 0 p1 = \x, p => helper k' k x (cong (\x => case x of {GT => True; _ => False}) p0) p in
     let 0 p2 : In (k ==) (filter (k' >) keys) = inFilter' (k' >) (k ==) p1 keys k_in_keys in

@@ -12,8 +12,9 @@ import Data.List
 import Data.In
 import Data.LawfulOrd
 
-xj : (f : a -> b) -> (g : a -> b) -> ((x : a) -> f x = g x) -> ((\x => f x) = (\x => g x))
-xj f g p = ?xjh
+-- TODO: Find out a way to do this without extensional function equality
+funext : (f : a -> b) -> (g : a -> b) -> ((x : a) -> f x = g x) -> (f = g)
+funext = funext
 
 helper' : LawfulOrd a => (x : a) -> (y : a) -> (z : a) -> (compare x y = GT) -> (compare y z = EQ) -> (compare x z = GT)
 helper' x y z p1 p2 = rewrite sym $ equality2 y z x p2 in p1
@@ -170,9 +171,13 @@ insertG' k v (RedNode k' v' l r {kp}) =
       in
       BadRedNode k' v' l'' r' {kp = MkInCons k keys kp}
     EQEquality p0 =>
+      let 0 p2 = funext (compare k') (compare k) (\x => equality1 k' k x (reversion3 k k' p0)) in
       -- Idris 2 parser is overly restrictive
-      let helper2 : ((f : Ordering -> Bool) -> {auto p1 : f EQ = False} -> (filter (\x => f (compare k' x)) keys = filter (\x => f (compare k x)) (k :: keys)))
-          helper2 f {p1} = rewrite reflexivity k in rewrite p1 in ?huhu Refl
+      let 0 helper2 : ((f : Ordering -> Bool) -> {auto p1 : f EQ = False} -> (filter (\x => f (compare k' x)) keys = filter (\x => f (compare k x)) (k :: keys)))
+          helper2 f {p1} =
+            rewrite reflexivity k in
+            rewrite p1 in
+            cong (\arg => filter (\x => f (arg x)) keys) p2
       in
       let l' : GoodTree {color = Black, height, kt, kord, vt, keys = filter (k >) (k :: keys)} =
           replace {p = \arg => GoodTree {color = Black, height, kt, kord, vt, keys = arg}}

@@ -6,6 +6,7 @@ interface LawfulOrd a where
   reflexivity : (x : a) -> (compare x x = EQ)
   reversion1 : (x : a) -> (y : a) -> (compare x y = LT) -> (compare y x = GT)
   reversion2 : (x : a) -> (y : a) -> (compare x y = GT) -> (compare y x = LT)
+  reversion3 : (x : a) -> (y : a) -> (compare x y = EQ) -> (compare y x = EQ)
   transitivity : (x : a) -> (y : a) -> (z : a) -> (compare x y = LT) -> (compare y z = LT) -> (compare x z = LT)
   equality1 : (x : a) -> (y : a) -> (z : a) -> (compare x y = EQ) -> (compare x z = compare y z)
   equality2 : (x : a) -> (y : a) -> (z : a) -> (compare x y = EQ) -> (compare z x = compare z y)
@@ -46,4 +47,3 @@ convEQ x y p with (compare x y)
   convEQ x y Refl | GT impossible
   convEQ x y Refl | EQ = Refl
   convEQ x y Refl | LT impossible
-

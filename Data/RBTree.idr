@@ -13,7 +13,7 @@ import Data.In
 import Data.LawfulOrd
 
 -- TODO: Find out a way to do this without extensional function equality
-funext : (f : a -> b) -> (g : a -> b) -> ((x : a) -> f x = g x) -> (f = g)
+0 funext : (f : a -> b) -> (g : a -> b) -> ((x : a) -> f x = g x) -> (f = g)
 funext = funext
 
 helper' : LawfulOrd a => (x : a) -> (y : a) -> (z : a) -> (compare x y = GT) -> (compare y z = EQ) -> (compare x z = GT)
@@ -54,6 +54,11 @@ data GoodTree :
     GoodTree {height, kt, kord, keys = filter (k >) keys, vt} ->
     GoodTree {height, kt, kord, keys = filter (k <) keys, vt} ->
     GoodTree {height = S height, color = Black, kt, kord, keys, vt}
+
+getColor : GoodTree {color} -> Subset Color (\color' => color = color')
+getColor Empty = Element Black Refl
+getColor (BlackNode _ _ _ _) = Element Black Refl
+getColor (RedNode _ _ _ _) = Element Red Refl
 
 data OrderingEq : Ordering -> Type where
   LTEquality : (0 _ : x === LT) -> OrderingEq x
@@ -143,7 +148,7 @@ insertG' :
   vt k ->
   GoodTree {kt, height, color, kord, vt, keys} ->
   case color of {
-    Black => Exists \color => GoodTree {height, color, kt, kord, vt, keys = k :: keys}
+    Black => Exists {type = Color} \color : Color => GoodTree {height, color, kt, kord, vt, keys = k :: keys}
     Red => BadTree {height, kt, kord, vt, keys = k :: keys}
   }
 insertG' {keys = .([])} k v Empty =
@@ -204,8 +209,22 @@ insertG' k v (RedNode k' v' l r {kp}) =
         replace {p = \arg => GoodTree {height, color = Black, kt, kord, vt, keys = arg}} p5 l
       in
       BadRedNode k' v' l' r'' {kp = MkInCons k keys kp}
-insertG' _ _ _ = ?insertG'Hole
+insertG' k v (BlackNode k' v' Empty r {kp}) = ?inshole
+insertG' k v (BlackNode k' v' l r {kp}) = ?inshole
+--  case orderingMatch (compare k k') of
+--    LTEquality p0 => case l of
+--      Empty => ?emptyhole
+--      BlackNode _ _ _ _ =>
+--        let l' = insertG' k v l in
+--        let l'' = l' in
+--        ?hab
+--      RedNode _ _ _ _ =>
+--        let l' = insertG' k v l in
+--        ?har
+--    EQEquality _ => ?hb
+--    GTEquality _ => ?hc
 
+{-
 export
 data Tree : (kt : Type) -> (kord : LawfulOrd kt) => (kt -> Type) -> Type where
   MkTree : GoodTree {height, color, kt, kord, vt, keys} -> Tree kt vt {kord}
@@ -225,3 +244,4 @@ index = ?indexHole
 export
 index' : LawfullerOrd kt => (k : kt) -> Tree kt vt -> Maybe (vt k)
 index' = ?index'Hole
+-}

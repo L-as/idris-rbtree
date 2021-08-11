@@ -182,6 +182,38 @@ balanceLeft _ _ _ _ = ?balanceLeftHole
 -}
 
 mutual
+  -- TODO: Merge insertLeftBlack and insertRightBlack somehow?
+  insertRightBlack :
+    (kord : LawfulOrd kt) =>
+    (k : kt) ->
+    vt k ->
+    (k' : kt) ->
+    {0 kp : In (k' ==) keys} ->
+    vt k' ->
+    {0 gtEq : compare k k' = GT} ->
+    {0 keyslEq : keysl = filter (k' >) keys} ->
+    GoodTree {height, color = colorLeft, kt, kord, keys = keysl, vt} ->
+    {0 keysrEq : keysr = filter (k' <) keys} ->
+    GoodTree {height, color = Black, kt, kord, keys = keysr, vt} ->
+    (
+      GoodTree {color = colorLeft, height, kt, kord, vt, keys = filter (k' >) (k :: keys)},
+      Exists \color' => GoodTree {color = color', height, kt, kord, vt, keys = filter (k' <) (k :: keys)}
+    )
+  insertRightBlack k v k' v' l r =
+    let (Evidence color' r') = insertG' k v (toAlsoGoodTree r) in
+    let 0 p1 = reversion2 k k' gtEq in
+    let 0 p2 = cong (\case { LT => True; _ => False }) p1 in
+    let 0 p3 : (k :: filter (k' <) keys = filter (k' <) (k :: keys)) = rewrite p2 in Refl in
+    let r'' : GoodTree {color = color', height, kt, kord, vt, keys = filter (k' <) (k :: keys)} =
+      replace {p = \arg => GoodTree {height, color = color', kt, kord, vt, keys = arg}} p3 (rewrite sym keysrEq in r')
+    in
+    let 0 p4 : (k' > k = False) = cong (\case { GT => True; _ => False }) p1 in
+    let 0 p5 : (filter (k' >) keys = filter (k' >) (k :: keys)) = rewrite p4 in Refl in
+    let l' : GoodTree {color = colorLeft, height, kt, kord, vt, keys = filter (k' >) (k :: keys)} =
+      replace {p = \arg => GoodTree {height, color = colorLeft, kt, kord, vt, keys = arg}} p5 (rewrite sym keyslEq in l)
+    in
+    (l', Evidence color' r'')
+
   insertLeftBlack :
     (kord : LawfulOrd kt) =>
     (k : kt) ->
@@ -212,23 +244,6 @@ mutual
       replace {p = \arg => GoodTree {height, color = colorRight, kt, kord, vt, keys = arg}} p5 (rewrite sym keysrEq in r)
     in
     (Evidence color' l'', r')
-
-  insertBlackLeftBlack :
-    (kord : LawfulOrd kt) =>
-    (k : kt) ->
-    vt k ->
-    (k' : kt) ->
-    {0 kp : In (k' ==) keys} ->
-    vt k' ->
-    {0 ltEq : compare k k' = LT} ->
-    {0 keyslEq : keysl = filter (k' >) keys} ->
-    GoodTree {height, color = Black, kt, kord, keys = keysl, vt} ->
-    {0 keysrEq : keysr = filter (k' <) keys} ->
-    GoodTree {height, color = colorRight, kt, kord, keys = keysr, vt} ->
-    GoodTree {height = S height, color = Black, kt, kord, keys = k :: keys, vt}
-  insertBlackLeftBlack k v k' v' l r =
-    let (Evidence color' l', r') = insertLeftBlack k v k' v' l r {ltEq, keyslEq, keysrEq, kp} in
-    BlackNode k' v' l' r' {kp = MkInCons k keys kp}
 
   insertBlackLeftRed :
     (kord : LawfulOrd kt) =>
@@ -265,20 +280,9 @@ mutual
     )
   insertG' k v (AlsoRedNode k' v' l r {kp, keyslEq, keysrEq}) =
     case orderingMatch (compare k k') of
-      LTEquality p0 =>
-        let (Evidence color' l') = insertG' k v (toAlsoGoodTree l) in
-        let 0 p1 = reversion1 k k' p0 in
-        let 0 p2 = cong (\case { GT => True; _ => False }) p1 in
-        let 0 p3 : (k :: filter (k' >) keys = filter (k' >) (k :: keys)) = rewrite p2 in Refl in
-        let l'' : GoodTree {color = color', height, kt, kord, vt, keys = filter (k' >) (k :: keys)} =
-          replace {p = \arg => GoodTree {height, color = color', kt, kord, vt, keys = arg}} p3 (rewrite sym keyslEq in l')
-        in
-        let 0 p4 : (k' < k = False) = cong (\case { LT => True; _ => False }) p1 in
-        let 0 p5 : (filter (k' <) keys = filter (k' <) (k :: keys)) = rewrite p4 in Refl in
-        let r' : GoodTree {color = Black, height, kt, kord, vt, keys = filter (k' <) (k :: keys)} =
-          replace {p = \arg => GoodTree {height, color = Black, kt, kord, vt, keys = arg}} p5 (rewrite sym keysrEq in r)
-        in
-        BadRedNode k' v' l'' r' {kp = MkInCons k keys kp}
+      LTEquality ltEq =>
+        let (Evidence color' l', r') = insertLeftBlack k v k' v' l r {ltEq, kp, keyslEq, keysrEq} in
+        BadRedNode k' v' l' r' {kp = MkInCons k keys kp}
       EQEquality p0 =>
         let 0 p2 = funext (compare k') (compare k) (\x => equality1 k' k x (reversion3 k k' p0)) in
         -- Idris 2 parser is overly restrictive
@@ -299,25 +303,19 @@ mutual
               (replace {p = \arg => GoodTree {height, color = Black, kt, kord, vt, keys = arg}} keysrEq r)
         in
         BadRedNode k v l' r' {kp = MkIn k (cong (\case { EQ => True; _ => False }) (reflexivity k)) keys}
-      GTEquality p0 =>
-        let (Evidence color' r') = insertG' k v (toAlsoGoodTree r) in
-        let 0 p1 = reversion2 k k' p0 in
-        let 0 p2 = cong (\case { LT => True; _ => False }) p1 in
-        let 0 p3 : (k :: filter (k' <) keys = filter (k' <) (k :: keys)) = rewrite p2 in Refl in
-        let r'' : GoodTree {color = color', height, kt, kord, vt, keys = filter (k' <) (k :: keys)} =
-          replace {p = \arg => GoodTree {height, color = color', kt, kord, vt, keys = arg}} p3 (rewrite sym keysrEq in r')
-        in
-        let 0 p4 : (k' > k = False) = cong (\case { GT => True; _ => False }) p1 in
-        let 0 p5 : (filter (k' >) keys = filter (k' >) (k :: keys)) = rewrite p4 in Refl in
-        let l' : GoodTree {color = Black, height, kt, kord, vt, keys = filter (k' >) (k :: keys)} =
-          replace {p = \arg => GoodTree {height, color = Black, kt, kord, vt, keys = arg}} p5 (rewrite sym keyslEq in l)
-        in
-        BadRedNode k' v' l' r'' {kp = MkInCons k keys kp}
+      GTEquality gtEq =>
+        let (l', Evidence color' r') = insertRightBlack k v k' v' l r {gtEq, kp, keyslEq, keysrEq} in
+        BadRedNode k' v' l' r' {kp = MkInCons k keys kp}
   insertG' k v whole@(AlsoBlackNode k' v' l r {kp, keysl, keyslEq, keysr, keysrEq, height = height'}) = case orderingMatch (compare k k') of
     LTEquality p0 =>
       case l of
-        Empty => Evidence Black $ insertBlackLeftBlack k v k' v' l r {ltEq = p0, kp, keyslEq, keysrEq, kord, kt, vt, keysl, keysr, keys}
-        (BlackNode _ _ _ _) => Evidence Black $ insertBlackLeftBlack k v k' v' l r {ltEq = p0, kp, keyslEq, keysrEq, kord, kt, vt, keysl, keysr, keys}
+        Empty =>
+          let (Evidence color' l', r') = insertLeftBlack k v k' v' l r {ltEq = p0, kp, keyslEq, keysrEq} in
+          Evidence Black $ BlackNode k' v' l' r' {kp = MkInCons k keys kp}
+        (BlackNode _ _ _ _) =>
+          let (Evidence color' l', r') = insertLeftBlack k v k' v' l r {ltEq = p0, kp, keyslEq, keysrEq} in
+          Evidence Black $ BlackNode k' v' l' r' {kp = MkInCons k keys kp}
+
         (RedNode _ _ _ _) => insertBlackLeftRed k v k' v' p0 l r {kp, keyslEq, keysrEq, kord, kt, vt, keysl, keysr, keys}
     EQEquality p0 => ?heq
     GTEquality p0 => ?hgt

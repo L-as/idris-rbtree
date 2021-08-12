@@ -307,19 +307,25 @@ mutual
         let (l', Evidence color' r') = insertRightBlack k v k' v' l r {gtEq, kp, keyslEq, keysrEq} in
         BadRedNode k' v' l' r' {kp = MkInCons k keys kp}
   insertG' k v whole@(AlsoBlackNode k' v' l r {kp, keysl, keyslEq, keysr, keysrEq, height = height'}) = case orderingMatch (compare k k') of
-    LTEquality p0 =>
+    LTEquality ltEq =>
       case l of
         Empty =>
-          let (Evidence color' l', r') = insertLeftBlack k v k' v' l r {ltEq = p0, kp, keyslEq, keysrEq} in
+          let (Evidence color' l', r') = insertLeftBlack k v k' v' l r {ltEq, kp, keyslEq, keysrEq} in
           Evidence Black $ BlackNode k' v' l' r' {kp = MkInCons k keys kp}
         (BlackNode _ _ _ _) =>
-          let (Evidence color' l', r') = insertLeftBlack k v k' v' l r {ltEq = p0, kp, keyslEq, keysrEq} in
+          let (Evidence color' l', r') = insertLeftBlack k v k' v' l r {ltEq, kp, keyslEq, keysrEq} in
           Evidence Black $ BlackNode k' v' l' r' {kp = MkInCons k keys kp}
-
-        (RedNode _ _ _ _) => insertBlackLeftRed k v k' v' p0 l r {kp, keyslEq, keysrEq, kord, kt, vt, keysl, keysr, keys}
-    EQEquality p0 => ?heq
-    GTEquality p0 => ?hgt
-  insertG' _ _ _ = ?inshole
+        (RedNode _ _ _ _) => insertBlackLeftRed k v k' v' ltEq l r {kp, keyslEq, keysrEq, kord, kt, vt, keysl, keysr, keys}
+    EQEquality p0 => ?hgt
+    GTEquality gtEq =>
+      case r of
+        Empty =>
+          let (l', Evidence color' r') = insertRightBlack k v k' v' l r {gtEq, kp, keyslEq, keysrEq} in
+          Evidence Black $ BlackNode k' v' l' r' {kp = MkInCons k keys kp}
+        BlackNode _ _ _ _ =>
+          let (l', Evidence color' r') = insertRightBlack k v k' v' l r {gtEq, kp, keyslEq, keysrEq} in
+          Evidence Black $ BlackNode k' v' l' r' {kp = MkInCons k keys kp}
+        RedNode _ _ _ _ => ?xxc
 
 {-
 export

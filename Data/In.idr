@@ -5,7 +5,7 @@ import Data.List
 public export
 data In : (a -> Bool) -> List a -> Type where
   MkIn : (x : a) -> (f x = True) -> (xs : List a) -> In f (x :: xs)
-  MkInCons : (x : a) -> (xs : List a) -> In f xs -> In f (x :: xs)
+  MkInCons : (x : a) -> (0 xs : List a) -> In f xs -> In f (x :: xs)
 
 -- Why... https://github.com/idris-lang/Idris2/issues/1811
 boolMatch : (x : Bool) -> Either (x = False) (x = True)
@@ -48,3 +48,28 @@ inFilter' f g p1 (x :: xs) (MkInCons x xs p2) =
 --    } in
 --    extractIn f xs p3 -- (?kkd (getIn p) p2)
 
+lemma0 : ([x] = [y]) -> (x = y)
+lemma0 Refl = Refl
+
+lemma1 : {0 xs : List a} -> {0 ys : List a} -> ((x :: xs) = (y :: ys)) -> (xs = ys)
+lemma1 Refl = Refl
+
+lemma2 : {0 xs : List a} -> {0 ys : List a} -> ((x :: xs) = (y :: ys)) -> (x = y)
+lemma2 Refl = Refl
+
+outFilter' : {0 f : a -> Bool} -> {g : a -> Bool} -> (xxs : List a) -> (pl : yys = filter g xxs) -> In f yys -> In f xxs
+outFilter' [] pl (MkIn _ _ _) impossible
+outFilter' [] pl (MkInCons _ _ _) impossible
+outFilter' (x :: xs) pl (MkIn y py ys) with (g x)
+  outFilter' (x :: xs) pl (MkIn y py ys) | True =
+    let pl' = lemma2 pl in
+    let px : (f x = True) = rewrite sym pl' in py in
+    MkIn x px xs
+  outFilter' (x :: xs) pl (MkIn y py ys) | False = MkInCons x xs $ outFilter' {f, g} xs pl (MkIn {f} y py ys)
+outFilter' (x :: xs) pl (MkInCons y ys py) with (g x)
+  outFilter' (x :: xs) pl (MkInCons y ys py) | True = MkInCons x xs $ outFilter' {f, g} xs (lemma1 pl) py
+  outFilter' (x :: xs) pl (MkInCons y ys py) | False = MkInCons x xs $ outFilter' {f, g} xs pl (MkInCons y ys py)
+
+public export
+outFilter : {g : a -> Bool} -> (l : List a) -> In f (filter g l) -> In f l
+outFilter l p = outFilter' {f, g} l Refl p

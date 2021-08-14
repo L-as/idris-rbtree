@@ -174,8 +174,8 @@ balanceLeft :
   {0 keysrEq : keysr = filter (k <) keys} ->
   GoodTree {height, color = colorRight, kt, kord, keys = keysr, vt} ->
   Exists \color : Color => GoodTree {height = S height, color, kt, kord, keys = keys, vt}
-balanceLeft zk zv (BadRedNode xk xv a (RedNode yk yv b c)) d =
-  Evidence Red $ RedNode yk yv (BlackNode xk xv a b) (BlackNode zk zv c d)
+balanceLeft zk zv (BadRedNode xk xv a (RedNode yk yv b c {kp = ykp})) d =
+  Evidence Red $ RedNode yk yv ?l ?r {kp = ?newkp}
 --balanceLeft zk zv (BadRedNode yk yv (RedNode xk xv a b) c) d = Evidence Red $ RedNode yk yv (BlackNode xk xv a b) (BlackNode zk zv c d)
 --balanceLeft xk xv (BadRedNode yk yv (BlackNode zk zv a b) (BlackNode wk wv c d)) e = Evidence Black $ BlackNode xk xv (RedNode yk yv (BlackNode zk zv a b) (BlackNode wk wv c d)) e
 --balanceLeft xk xv (BadRedNode yk yv Empty Empty) e = Evidence Black $ BlackNode xk xv (RedNode yk yv Empty Empty) e

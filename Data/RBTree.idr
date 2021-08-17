@@ -117,21 +117,21 @@ indexG k (RedNode k' v l r) = case orderingMatch (compare k' k) of
   EQEquality p0 => Evidence k' $ Evidence p0 v
   GTEquality p0 =>
     let 0 p1 = \x, p => helper k' k x (cong (\case {GT => True; _ => False}) p0) p in
-    let 0 p2 : In (k ==) (filter (k' >) keys) = inFilter' (k' >) (k ==) p1 keys k_in_keys in
+    let 0 p2 : In (k ==) (filter (k' >) keys) = inFilter (k' >) (k ==) p1 keys k_in_keys in
     indexG k l {k_in_keys = p2}
   LTEquality p0 =>
     let 0 p1 = \x, p => ( let p1' = replace {p = \arg => arg = LT} (equality2 k x k' (convEQ k x p)) p0 in let p1'' = cong (\case {LT => True; _ => False}) p1' in the (k' < x = True) p1'' ) in
-    let 0 p2 : In (k ==) (filter (k' <) keys) = inFilter' (k' <) (k ==) p1 keys k_in_keys in
+    let 0 p2 : In (k ==) (filter (k' <) keys) = inFilter (k' <) (k ==) p1 keys k_in_keys in
     indexG k r {k_in_keys = p2}
 indexG k (BlackNode k' v l r) = case orderingMatch (compare k' k) of
   EQEquality p0 => Evidence k' $ Evidence p0 v
   GTEquality p0 =>
     let 0 p1 = \x, p => helper k' k x (cong (\case {GT => True; _ => False}) p0) p in
-    let 0 p2 : In (k ==) (filter (k' >) keys) = inFilter' (k' >) (k ==) p1 keys k_in_keys in
+    let 0 p2 : In (k ==) (filter (k' >) keys) = inFilter (k' >) (k ==) p1 keys k_in_keys in
     indexG k l {k_in_keys = p2}
   LTEquality p0 =>
     let 0 p1 = \x, p => ( let p1' = replace {p = \arg => arg = LT} (equality2 k x k' (convEQ k x p)) p0 in let p1'' = cong (\case {LT => True; _ => False}) p1' in the (k' < x = True) p1'' ) in
-    let 0 p2 : In (k ==) (filter (k' <) keys) = inFilter' (k' <) (k ==) p1 keys k_in_keys in
+    let 0 p2 : In (k ==) (filter (k' <) keys) = inFilter (k' <) (k ==) p1 keys k_in_keys in
     indexG k r {k_in_keys = p2}
 
 -- Like GoodTree but BadRedNode can have red children
@@ -166,16 +166,30 @@ constructBlack = ?constructBlackHole
 
 balanceLeft :
   (kord : LawfulOrd kt) =>
-  (k : kt) ->
-  {0 kp : In (k ==) keys} ->
-  vt k ->
-  {0 keyslEq : keysl = filter (k >) keys} ->
+  (zk : kt) ->
+  {0 zkp : In (zk ==) keys} ->
+  vt zk ->
+  {0 keyslEq : keysl = filter (zk >) keys} ->
   BadTree {height, kt, kord, keys = keysl, vt} ->
-  {0 keysrEq : keysr = filter (k <) keys} ->
+  {0 keysrEq : keysr = filter (zk <) keys} ->
   GoodTree {height, color = colorRight, kt, kord, keys = keysr, vt} ->
   Exists \color : Color => GoodTree {height = S height, color, kt, kord, keys = keys, vt}
-balanceLeft zk zv (BadRedNode xk xv a (RedNode yk yv b c {kp = ykp})) d =
-  Evidence Red $ RedNode yk yv ?l ?r {kp = ?newkp}
+balanceLeft zk zv (BadRedNode {kp = xkp} xk xv a (RedNode yk yv b c {kp = ykp})) d =
+  let
+    0 ykp' : (In (yk ==) keysl) = outFilter ykp
+    0 ykp' : (In (yk ==) (filter (zk >) keys)) = rewrite sym keyslEq in ykp'
+    0 ykp' = outFilter ykp'
+
+    0 yk_gt_xk : (GT = compare yk xk) = ?jjj
+
+    0 xkp' : In (xk ==) keys = outFilter $ replace {p = \arg => In (xk ==) arg} keyslEq xkp
+
+    0 p0 : (arg : kt) -> (xk == arg = True) -> (yk > arg = True)
+    p0 arg prr = cong (\case GT => True; _ => False) $ sym $ trans {a = GT, b = compare yk xk, c = compare yk arg} ?xuuu (equality2 xk arg yk (convEQ xk arg prr))
+
+    newleft := BlackNode xk xv (?ha a) (?hb b) {kp = inFilter (yk >) (xk ==) p0 _ xkp'}
+  in
+  Evidence Red $ RedNode yk yv newleft ?r {kp = ykp'}
 --balanceLeft zk zv (BadRedNode yk yv (RedNode xk xv a b) c) d = Evidence Red $ RedNode yk yv (BlackNode xk xv a b) (BlackNode zk zv c d)
 --balanceLeft xk xv (BadRedNode yk yv (BlackNode zk zv a b) (BlackNode wk wv c d)) e = Evidence Black $ BlackNode xk xv (RedNode yk yv (BlackNode zk zv a b) (BlackNode wk wv c d)) e
 --balanceLeft xk xv (BadRedNode yk yv Empty Empty) e = Evidence Black $ BlackNode xk xv (RedNode yk yv Empty Empty) e

@@ -1,6 +1,16 @@
 module Data.In
 
 import Data.List
+import Data.List.Elem
+
+lemma0 : ([x] = [y]) -> (x = y)
+lemma0 Refl = Refl
+
+lemma1 : {0 xs : List a} -> {0 ys : List a} -> ((x :: xs) = (y :: ys)) -> (xs = ys)
+lemma1 Refl = Refl
+
+lemma2 : {0 xs : List a} -> {0 ys : List a} -> ((x :: xs) = (y :: ys)) -> (x = y)
+lemma2 Refl = Refl
 
 public export
 data In : (a -> Bool) -> List a -> Type where
@@ -24,14 +34,36 @@ inFilter f g p1 (x :: xs) (MkInCons x xs p2) =
     Left p3 => rewrite p3 in r
     Right p3 => rewrite p3 in MkInCons x (filter f xs) r
 
-lemma0 : ([x] = [y]) -> (x = y)
-lemma0 Refl = Refl
+makeRelevant : (0 _ : x = y) -> (x = y)
+makeRelevant Refl = Refl
 
-lemma1 : {0 xs : List a} -> {0 ys : List a} -> ((x :: xs) = (y :: ys)) -> (xs = ys)
-lemma1 Refl = Refl
+fromFilter : {f : a -> Bool} -> {l : List a} -> {lEq : l' === filter f l} -> Elem x l' -> (f x = True)
+fromFilter (Here {x, xs}) = case l of
+  [] impossible
+  y :: ys =>
+    let (MkDPair p0 p1) : DPair Bool ((f y) ===) = MkDPair (f y) Refl in
+    case p0 of
+      True =>
+        let p2 : (y :: filter f ys = filter f (y :: ys)) = rewrite p1 in Refl in
+        let p3 : (x :: xs = y :: filter f ys) = rewrite p2 in lEq in
+        let p4 = lemma2 p3 in
+        rewrite p4 in p1
+      False =>
+        let p2 : (filter f ys = filter f (y :: ys)) = rewrite p1 in Refl in
+        let p3 : (x :: xs = filter f ys) = rewrite p2 in lEq in
+        fromFilter {f, l = ys, lEq = p3} (Here {x, xs})
+fromFilter (There p) = ?h2
 
-lemma2 : {0 xs : List a} -> {0 ys : List a} -> ((x :: xs) = (y :: ys)) -> (x = y)
-lemma2 Refl = Refl
+extractIn' : {f : a -> Bool} -> {g : a -> Bool} -> {l : List a} -> {l' : List a} -> {lp : l' = filter g l} -> In f l' -> DPair a (\x => (f x = True, g x = True))
+extractIn' (MkIn x p0 xs) =
+  let (MkDPair p1 p2) : DPair Bool ((g x) ===) = MkDPair (g x) Refl in
+  case p1 of
+    True => MkDPair x (p0, p2)
+    False =>
+      case l of
+        [] impossible
+        y :: ys => MkDPair x (p0, ?uiu3)
+extractIn' _ = ?ju
 
 outFilter' : {0 f : a -> Bool} -> {g : a -> Bool} -> (xxs : List a) -> (pl : yys = filter g xxs) -> In f yys -> In f xxs
 outFilter' [] pl (MkIn _ _ _) impossible

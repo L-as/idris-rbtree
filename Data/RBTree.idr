@@ -151,18 +151,20 @@ data BadTree :
     GoodTree {height, kt, kord, keys = filter (k <) keys, vt} ->
     BadTree {height, kt, kord, keys, vt}
 
-{-
-constructBlack :
-  (kord : LawfulOrd kt) =>
-  (k : kt) ->
-  vt k ->
-  GoodTree {height, kt, kord, vt, keys = keysl} ->
-  {0 pl : all (Data.RBTree.(>) k) keysl = True} ->
-  GoodTree {height, kt, kord, vt, keys = keysr} ->
-  {0 pr : all (Data.RBTree.(<) k) keysr = True} ->
-  GoodTree {height = S height, color = Black, kt, kord, vt, keys = keysl <+> (k :: keysr)}
-constructBlack = ?constructBlackHole
--}
+lemma0 : LawfulOrd kt => {keys : List kt} -> (xk : kt) -> (yk : kt) -> In (yk ==) (filter (xk <) keys) -> (xk < yk = True)
+lemma0 xk yk p0 =
+  let (MkDPair p1 p2) : DPair Bool ((xk < yk) ===) = MkDPair (xk < yk) Refl in
+  case p1 of
+    True => p2
+    False => ?hhdu
+
+{-with (xk < yk)
+  lemma0 xk yk p | True = Refl
+  lemma0 xk yk p | False = myhelper xk yk p Refl
+    where
+      myhelper : {keys : List kt} -> (xk : kt) -> (yk : kt) -> In (yk ==) (filter (xk <) keys) -> (xk < yk = False) -> (xk < yk = True)
+      myhelper = ?xuuuh-}
+
 
 balanceLeft :
   (kord : LawfulOrd kt) =>

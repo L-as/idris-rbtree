@@ -52,7 +52,21 @@ fromFilter (Here {x, xs}) = case l of
         let p2 : (filter f ys = filter f (y :: ys)) = rewrite p1 in Refl in
         let p3 : (x :: xs = filter f ys) = rewrite p2 in lEq in
         fromFilter {f, l = ys, lEq = p3} (Here {x, xs})
-fromFilter (There p) = ?h2
+fromFilter (There p {x, y, xs}) =
+  case l of
+    [] impossible
+    z :: zs =>
+      let (MkDPair p0 p1) : DPair Bool ((f z) ===) = MkDPair (f z) Refl in
+      case p0 of
+        True =>
+          let p2 : (z :: filter f zs = filter f (z :: zs)) = rewrite p1 in Refl in
+          let p3 : (y :: xs = z :: filter f zs) = rewrite p2 in lEq in
+          let p4 = lemma1 p3 in
+          fromFilter {f, lEq = p4} p
+        False =>
+          let p2 : (filter f zs = filter f (z :: zs)) = rewrite p1 in Refl in
+          let p3 : (y :: xs = filter f zs) = rewrite p2 in lEq in
+          fromFilter {f, lEq = p3} (There p {x, y, xs})
 
 extractIn' : {f : a -> Bool} -> {g : a -> Bool} -> {l : List a} -> {l' : List a} -> {lp : l' = filter g l} -> In f l' -> DPair a (\x => (f x = True, g x = True))
 extractIn' (MkIn x p0 xs) =
@@ -62,7 +76,10 @@ extractIn' (MkIn x p0 xs) =
     False =>
       case l of
         [] impossible
-        y :: ys => MkDPair x (p0, ?uiu3)
+        y :: ys =>
+          let p3 = Here {x, xs} in
+          let p4 = fromFilter {f = g, l, l' = x :: xs, lEq = lp} p3 in
+          MkDPair x (p0, p4)
 extractIn' _ = ?ju
 
 outFilter' : {0 f : a -> Bool} -> {g : a -> Bool} -> (xxs : List a) -> (pl : yys = filter g xxs) -> In f yys -> In f xxs

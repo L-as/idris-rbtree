@@ -19,9 +19,6 @@ import Data.LawfulOrd
 0 funext : (f : a -> b) -> (g : a -> b) -> ((x : a) -> f x = g x) -> (f = g)
 funext = funext
 
-helper' : LawfulOrd a => (x : a) -> (y : a) -> (z : a) -> (compare x y = GT) -> (compare y z = EQ) -> (compare x z = GT)
-helper' x y z p1 p2 = rewrite sym $ equality2 y z x p2 in p1
-
 helper : LawfulOrd a => (x : a) -> (y : a) -> (z : a) -> (x > y = True) -> (y == z = True) -> (x > z = True)
 helper x y z p1 p2 =
   let p1' = convGT x y p1 in
@@ -151,20 +148,12 @@ data BadTree :
     GoodTree {height, kt, kord, keys = filter (k <) keys, vt} ->
     BadTree {height, kt, kord, keys, vt}
 
-lemma0 : LawfulOrd kt => {keys : List kt} -> (xk : kt) -> (yk : kt) -> In (yk ==) (filter (xk <) keys) -> (xk < yk = True)
+lemma0 : LawfulOrd kt => {keys : List kt} -> (xk : kt) -> (yk : kt) -> In (yk ==) (filter (xk <) keys) -> (compare xk yk = LT)
 lemma0 xk yk p0 =
-  let (MkDPair p1 p2) : DPair Bool ((xk < yk) ===) = MkDPair (xk < yk) Refl in
-  case p1 of
-    True => p2
-    False => ?hhdu
-
-{-with (xk < yk)
-  lemma0 xk yk p | True = Refl
-  lemma0 xk yk p | False = myhelper xk yk p Refl
-    where
-      myhelper : {keys : List kt} -> (xk : kt) -> (yk : kt) -> In (yk ==) (filter (xk <) keys) -> (xk < yk = False) -> (xk < yk = True)
-      myhelper = ?xuuuh-}
-
+  let MkDPair v (p3, p4) = extractIn p0 in
+  let p5 = equality2 _ _ xk (convEQ _ _ p3) in
+  let p6 = convLT xk v p4 in
+  trans p5 p6
 
 balanceLeft :
   (kord : LawfulOrd kt) =>
@@ -182,12 +171,16 @@ balanceLeft zk zv (BadRedNode {kp = xkp} xk xv a (RedNode yk yv b c {kp = ykp}))
     0 ykp' : (In (yk ==) (filter (zk >) keys)) = rewrite sym keyslEq in ykp'
     0 ykp' = outFilter ykp'
 
-    0 yk_gt_xk : (GT = compare yk xk) = ?jjj
+    0 yk_gt_xk : (GT = compare yk xk) = sym $ reversion1 xk yk $ lemma0 xk yk ykp
 
     0 xkp' : In (xk ==) keys = outFilter $ replace {p = \arg => In (xk ==) arg} keyslEq xkp
 
     0 p0 : (arg : kt) -> (xk == arg = True) -> (yk > arg = True)
-    p0 arg prr = cong (\case GT => True; _ => False) $ sym $ trans {a = GT, b = compare yk xk, c = compare yk arg} ?xuuu (equality2 xk arg yk (convEQ xk arg prr))
+    p0 arg prr =
+      let pp0 = reversion1 xk yk $ lemma0 xk yk ykp in
+      let pp1 = equality2 xk arg yk (convEQ xk arg prr) in
+      let pp2 = trans (sym pp1) pp0 in
+      cong (\case { GT => True; _ => False }) pp2
 
     newleft := BlackNode xk xv (?ha a) (?hb b) {kp = inFilter (yk >) (xk ==) p0 _ xkp'}
   in
@@ -196,6 +189,18 @@ balanceLeft zk zv (BadRedNode {kp = xkp} xk xv a (RedNode yk yv b c {kp = ykp}))
 --balanceLeft xk xv (BadRedNode yk yv (BlackNode zk zv a b) (BlackNode wk wv c d)) e = Evidence Black $ BlackNode xk xv (RedNode yk yv (BlackNode zk zv a b) (BlackNode wk wv c d)) e
 --balanceLeft xk xv (BadRedNode yk yv Empty Empty) e = Evidence Black $ BlackNode xk xv (RedNode yk yv Empty Empty) e
 balanceLeft _ _ _ _ = ?balanceLeftHole
+
+balanceRight :
+  (kord : LawfulOrd kt) =>
+  (zk : kt) ->
+  {0 zkp : In (zk ==) keys} ->
+  vt zk ->
+  {0 keyslEq : keysl = filter (zk >) keys} ->
+  GoodTree {height, color = colorLeft, kt, kord, keys = keysl, vt} ->
+  {0 keysrEq : keysr = filter (zk <) keys} ->
+  BadTree {height, kt, kord, keys = keysr, vt} ->
+  Exists \color : Color => GoodTree {height = S height, color, kt, kord, keys = keys, vt}
+balanceRight = ?balanceRightHole
 
 GoodBadTree :
   {height : Nat} ->
@@ -274,23 +279,6 @@ mutual
     in
     (l', r'')
 
-  insertBlackLeftRed :
-    (kord : LawfulOrd kt) =>
-    (k : kt) ->
-    vt k ->
-    (k' : kt) ->
-    {0 kp : In (k' ==) keys} ->
-    vt k' ->
-    {0 ltEq : compare k k' = LT} ->
-    {0 keyslEq : keysl = filter (k' >) keys} ->
-    GoodTree {height, color = Red, kt, kord, keys = keysl, vt} ->
-    {0 keysrEq : keysr = filter (k' <) keys} ->
-    GoodTree {height, color = colorRight, kt, kord, keys = keysr, vt} ->
-    Exists \color : Color => GoodTree {height = S height, color, kt, kord, keys = k :: keys, vt}
-  insertBlackLeftRed k v k' v' l r =
-    let (l', r') = insertLeft k v k' v' l r {kp, ltEq, keyslEq, keysrEq} in
-    ?mn
-
   insertG' :
     {0 color : Color} ->
     (kord : LawfulOrd kt) =>
@@ -343,7 +331,9 @@ mutual
         (BlackNode _ _ _ _) =>
           let (Evidence color' l', r') = insertLeft k v k' v' l r {ltEq, kp, keyslEq, keysrEq} in
           Evidence Black $ BlackNode k' v' l' r' {kp = MkInCons k keys kp}
-        (RedNode _ _ _ _) => insertBlackLeftRed k v k' v' l r {ltEq, kp, keyslEq, keysrEq, kord, kt, vt, keysl, keysr, keys}
+        (RedNode _ _ _ _) =>
+          let (l', r') = insertLeft k v k' v' l r {kp, ltEq, keyslEq, keysrEq} in
+          balanceLeft k' v' l' r' {kord}
     EQEquality p0 => ?hgt
     GTEquality gtEq =>
       case r of
@@ -353,7 +343,9 @@ mutual
         BlackNode _ _ _ _ =>
           let (l', Evidence color' r') = insertRight k v k' v' l r {gtEq, kp, keyslEq, keysrEq} in
           Evidence Black $ BlackNode k' v' l' r' {kp = MkInCons k keys kp}
-        RedNode _ _ _ _ => ?xxc
+        RedNode _ _ _ _ =>
+          let (l', r') = insertRight k v k' v' l r {kp, gtEq, keyslEq, keysrEq} in
+          balanceRight k' v' l' r' {kord}
 
 {-
 export

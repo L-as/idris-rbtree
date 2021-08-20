@@ -2,6 +2,7 @@ module Data.In
 
 import Data.List
 import Data.List.Elem
+import Data.DPair
 
 lemma0 : ([x] = [y]) -> (x = y)
 lemma0 Refl = Refl
@@ -68,19 +69,29 @@ fromFilter (There p {x, y, xs}) =
           let p3 : (y :: xs = filter f zs) = rewrite p2 in lEq in
           fromFilter {f, lEq = p3} (There p {x, y, xs})
 
-extractIn' : {f : a -> Bool} -> {g : a -> Bool} -> {l : List a} -> {l' : List a} -> {lp : l' = filter g l} -> In f l' -> DPair a (\x => (f x = True, g x = True))
+extractIn' : {f : a -> Bool} -> {g : a -> Bool} -> {l : List a} -> {l' : List a} -> {lEq : l' = filter g l} -> In f l' -> DPair a (\x => (f x = True, g x = True))
 extractIn' (MkIn x p0 xs) =
-  let (MkDPair p1 p2) : DPair Bool ((g x) ===) = MkDPair (g x) Refl in
-  case p1 of
-    True => MkDPair x (p0, p2)
-    False =>
-      case l of
-        [] impossible
-        y :: ys =>
-          let p3 = Here {x, xs} in
-          let p4 = fromFilter {f = g, l, l' = x :: xs, lEq = lp} p3 in
-          MkDPair x (p0, p4)
-extractIn' _ = ?ju
+  let p1 = Here {x, xs} in
+  let p2 = fromFilter {f = g, l, l' = x :: xs, lEq} p1 in
+  MkDPair x (p0, p2)
+extractIn' (MkInCons x xs rec) =
+  case l of
+    [] impossible
+    y :: ys =>
+      let (MkDPair p2 p3) : DPair Bool ((g y) ===) = MkDPair (g y) Refl in
+      case p2 of
+        True =>
+          let p4 : (y :: filter g ys = filter g (y :: ys)) = rewrite p3 in Refl in
+          let p5 : (x :: xs = y :: filter g ys) = rewrite p4 in lEq in
+          extractIn' {f, g, l = ys, l' = xs, lEq = lemma1 p5} rec
+        False =>
+          let p4 : (filter g ys = filter g (y :: ys)) = rewrite p3 in Refl in
+          let p5 : (x :: xs = filter g ys) = rewrite p4 in lEq in
+          extractIn' {f, g, l = ys, l' = x :: xs, lEq = p5} (MkInCons x xs rec)
+
+public export
+extractIn : {f : a -> Bool} -> {g : a -> Bool} -> {l : List a} -> In f (filter g l) -> DPair a (\x => (f x = True, g x = True))
+extractIn = extractIn' {lEq = Refl}
 
 outFilter' : {0 f : a -> Bool} -> {g : a -> Bool} -> (xxs : List a) -> (pl : yys = filter g xxs) -> In f yys -> In f xxs
 outFilter' [] pl (MkIn _ _ _) impossible

@@ -47,10 +47,24 @@ filterCommutative = filterCommutative' {f, g} l (filter f (filter g l)) Refl
 0 filterImplication' :
   {f : a -> Bool} -> {g : a -> Bool}
   -> ((x : a) -> (g x = True) -> (f x = True)) -> (xxs : List a) -> (yys : List a)
-  -> (yys = filter f (filter g xxs)) -> (yys = filter f xxs)
+  -> (yys = filter f (filter g xxs)) -> (yys = filter g xxs)
 filterImplication' p0 [] yys p1 = p1
-filterImplication' p0 (x :: xs) yys p1 = ?h0
+filterImplication' p0 (x :: xs) yys p1 =
+  case the (DPair Bool (g x ===)) $ MkDPair (g x) Refl of
+    MkDPair True p2 =>
+      let p3 : (filter f (filter g (x :: xs)) = filter f (x :: filter g xs)) = rewrite p2 in Refl in
+      let p4 : (filter f (x :: filter g xs) = x :: filter f (filter g xs)) = rewrite (p0 x p2) in Refl in
+      let p5 : (yys = x :: filter f (filter g xs)) = trans (trans p1 p3) p4 in
+      let p6 : (filter f (filter g xs) = filter g xs) = filterImplication' {f, g} p0 xs (filter f (filter g xs)) Refl in
+      let p7 : (yys = x :: filter g xs) = replace {p = \p => yys === x :: p} p6 p5 in
+      rewrite p2 in p7
+    MkDPair False p2 =>
+      let p3 : (filter f (filter g (x :: xs)) = filter f (filter g xs)) = rewrite p2 in Refl in
+      let p5 : (yys = filter f (filter g xs)) = trans p1 p3 in
+      let p6 : (filter f (filter g xs) = filter g xs) = filterImplication' {f, g} p0 xs (filter f (filter g xs)) Refl in
+      let p7 : (yys = filter g xs) = replace {p = (yys ===)} p6 p5 in
+      rewrite p2 in p7
 
 public export
-0 filterImplication : ((x : a) -> (g x = True) -> (f x = True)) -> (filter f (filter g l) = filter f l)
+0 filterImplication : ((x : a) -> (g x = True) -> (f x = True)) -> (filter f (filter g l) = filter g l)
 filterImplication p = filterImplication' {f, g} p l (filter f (filter g l)) Refl

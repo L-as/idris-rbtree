@@ -3,6 +3,7 @@ package typed-containers
 modules = 
   TypedContainers.In,
   TypedContainers.LawfulOrd,
+  TypedContainers.Util.Filter,
   TypedContainers.RBTree,
   TypedContainers.RBTree.Base,
   TypedContainers.RBTree.Insert,

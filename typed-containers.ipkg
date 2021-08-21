@@ -1,0 +1,9 @@
+package typed-containers
+
+modules = 
+  TypedContainers.In,
+  TypedContainers.LawfulOrd,
+  TypedContainers.RBTree,
+  TypedContainers.RBTree.Base,
+  TypedContainers.RBTree.Insert,
+  TypedContainers.RBTree.Index

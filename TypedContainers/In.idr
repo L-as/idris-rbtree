@@ -1,4 +1,4 @@
-module Data.In
+module TypedContainers.In
 
 import Data.List
 import Data.List.Elem
@@ -18,11 +18,6 @@ data In : (a -> Bool) -> List a -> Type where
   MkIn : (x : a) -> (f x = True) -> (xs : List a) -> In f (x :: xs)
   MkInCons : (x : a) -> (0 xs : List a) -> In f xs -> In f (x :: xs)
 
--- Why... https://github.com/idris-lang/Idris2/issues/1811
-boolMatch : (x : Bool) -> Either (x = False) (x = True)
-boolMatch False = Left Refl
-boolMatch True = Right Refl
-
 public export
 inFilter : (f : a -> Bool) -> (g : a -> Bool) -> ((x : a) -> (g x = True) -> f x = True) -> (l : List a) -> In g l -> In g (filter f l)
 inFilter f g p1 [] p2 impossible
@@ -31,12 +26,10 @@ inFilter f g p1 (x :: xs) (MkIn x p2 xs) =
   rewrite p3 in MkIn x p2 (filter f xs) {f = g}
 inFilter f g p1 (x :: xs) (MkInCons x xs p2) =
   let r = inFilter f g p1 xs p2 in
-  case boolMatch (f x) of
-    Left p3 => rewrite p3 in r
-    Right p3 => rewrite p3 in MkInCons x (filter f xs) r
-
-makeRelevant : (0 _ : x = y) -> (x = y)
-makeRelevant Refl = Refl
+  let MkDPair p2 p3 : DPair Bool (f x ===) = MkDPair (f x) Refl in
+  case p2 of
+    True => rewrite p3 in MkInCons x (filter f xs) r
+    False => rewrite p3 in r
 
 fromFilter : {f : a -> Bool} -> {l : List a} -> {lEq : l' === filter f l} -> Elem x l' -> (f x = True)
 fromFilter (Here {x, xs}) = case l of

@@ -1,152 +1,15 @@
-||| Red black trees, adapted from Purely functional data structures by Chris Okasaki.
-|||
-||| You are guaranteed to get the correct value for a key.
-|||
-||| TODO: Implement deletion.
-|||
-||| The code has a lot of duplication that can not be unduplicated in trivially
-||| , due to the need to prove different things in different cases.
-
-module Data.RBTree
+module TypedContainers.RBTree.Insert
 
 import Data.Nat
 import Data.DPair
 import Data.List
-import Data.In
-import Data.LawfulOrd
+import TypedContainers.In
+import TypedContainers.LawfulOrd
+import TypedContainers.RBTree.Base
 
 -- TODO: Find out a way to do this without extensional function equality
 0 funext : (f : a -> b) -> (g : a -> b) -> ((x : a) -> f x = g x) -> (f = g)
 funext = funext
-
-helper : LawfulOrd a => (x : a) -> (y : a) -> (z : a) -> (x > y = True) -> (y == z = True) -> (x > z = True)
-helper x y z p1 p2 =
-  let p1' = convGT x y p1 in
-  let p2' = convEQ y z p2 in
-  let p3 = equality2 y z x p2' in
-  let p4 : (compare x z = GT) = replace {p = \arg => arg = GT} p3 p1' in
-  cong (\case {GT => True; _ => False}) p4
-
-data Color = Red | Black
-
-data GoodTree :
-  {height : Nat} ->
-  {color : Color} ->
-  {kt : Type} ->
-  {kord : LawfulOrd kt} ->
-  {keys : List kt} ->
-  {vt : kt -> Type} -> Type
-  where
-  Empty : GoodTree {height = 0, color = Black, keys = []}
-  RedNode :
-    {0 kord : LawfulOrd kt} ->
-    (k : kt) ->
-    {0 kp : In (k ==) keys} ->
-    vt k ->
-    GoodTree {height, color = Black, kt, kord, keys = filter (k >) keys, vt} ->
-    GoodTree {height, color = Black, kt, kord, keys = filter (k <) keys, vt} ->
-    GoodTree {height, color = Red, kt, kord, keys, vt}
-  BlackNode :
-    {0 kord : LawfulOrd kt} ->
-    (k : kt) ->
-    {0 kp : In (k ==) keys} ->
-    vt k ->
-    GoodTree {height, kt, kord, keys = filter (k >) keys, vt} ->
-    GoodTree {height, kt, kord, keys = filter (k <) keys, vt} ->
-    GoodTree {height = S height, color = Black, kt, kord, keys, vt}
-
-data AlsoGoodTree :
-  {height : Nat} ->
-  {color : Color} ->
-  {kt : Type} ->
-  {kord : LawfulOrd kt} ->
-  {keys : List kt} ->
-  {vt : kt -> Type} -> Type
-  where
-  AlsoEmpty : AlsoGoodTree {height = 0, color = Black, keys = []}
-  AlsoRedNode :
-    {0 kord : LawfulOrd kt} ->
-    (k : kt) ->
-    {0 kp : In (k ==) keys} ->
-    vt k ->
-    {0 keyslEq : keysl = filter (k >) keys} ->
-    GoodTree {height, color = Black, kt, kord, keys = keysl, vt} ->
-    {0 keysrEq : keysr = filter (k <) keys} ->
-    GoodTree {height, color = Black, kt, kord, keys = keysr, vt} ->
-    AlsoGoodTree {height, color = Red, kt, kord, keys, vt}
-  AlsoBlackNode :
-    {0 kord : LawfulOrd kt} ->
-    (k : kt) ->
-    {0 kp : In (k ==) keys} ->
-    vt k ->
-    {0 keyslEq : keysl = filter (k >) keys} ->
-    GoodTree {height, kt, kord, keys = keysl, vt} ->
-    {0 keysrEq : keysr = filter (k <) keys} ->
-    GoodTree {height, kt, kord, keys = keysr, vt} ->
-    AlsoGoodTree {height = S height, color = Black, kt, kord, keys, vt}
-
--- TODO: Use new `id` optimization here https://github.com/idris-lang/Idris2/pull/1817
--- , which will require making AlsoGoodTree recursive on itself.
-toAlsoGoodTree : GoodTree {height, color, kt, kord, keys, vt} -> AlsoGoodTree {height, color, kt, kord, keys, vt}
-toAlsoGoodTree Empty = AlsoEmpty
-toAlsoGoodTree (BlackNode k v l r {kp}) = AlsoBlackNode k v l r {keyslEq = Refl, keysrEq = Refl, kp}
-toAlsoGoodTree (RedNode k v l r {kp}) = AlsoRedNode k v l r {keyslEq = Refl, keysrEq = Refl, kp}
-
-getColor : GoodTree {color} -> Subset Color (\color' => color = color')
-getColor Empty = Element Black Refl
-getColor (BlackNode _ _ _ _) = Element Black Refl
-getColor (RedNode _ _ _ _) = Element Red Refl
-
-data OrderingEq : Ordering -> Type where
-  LTEquality : (0 _ : x === LT) -> OrderingEq x
-  EQEquality : (0 _ : x === EQ) -> OrderingEq x
-  GTEquality : (0 _ : x === GT) -> OrderingEq x
-
--- Why... https://github.com/idris-lang/Idris2/issues/1811
-orderingMatch : (x : Ordering) -> OrderingEq x
-orderingMatch LT = LTEquality Refl
-orderingMatch EQ = EQEquality Refl
-orderingMatch GT = GTEquality Refl
-
-indexG : {0 keys : List kt} -> {kord : LawfulOrd kt} -> (k : kt) -> {0 k_in_keys : In (k ==) keys} -> GoodTree {kt, kord, keys, vt} -> Exists $ \k' => Exists $ \_ : compare k' k = EQ => vt k'
-indexG k Empty impossible
-indexG k (RedNode k' v l r) = case orderingMatch (compare k' k) of
-  EQEquality p0 => Evidence k' $ Evidence p0 v
-  GTEquality p0 =>
-    let 0 p1 = \x, p => helper k' k x (cong (\case {GT => True; _ => False}) p0) p in
-    let 0 p2 : In (k ==) (filter (k' >) keys) = inFilter (k' >) (k ==) p1 keys k_in_keys in
-    indexG k l {k_in_keys = p2}
-  LTEquality p0 =>
-    let 0 p1 = \x, p => ( let p1' = replace {p = \arg => arg = LT} (equality2 k x k' (convEQ k x p)) p0 in let p1'' = cong (\case {LT => True; _ => False}) p1' in the (k' < x = True) p1'' ) in
-    let 0 p2 : In (k ==) (filter (k' <) keys) = inFilter (k' <) (k ==) p1 keys k_in_keys in
-    indexG k r {k_in_keys = p2}
-indexG k (BlackNode k' v l r) = case orderingMatch (compare k' k) of
-  EQEquality p0 => Evidence k' $ Evidence p0 v
-  GTEquality p0 =>
-    let 0 p1 = \x, p => helper k' k x (cong (\case {GT => True; _ => False}) p0) p in
-    let 0 p2 : In (k ==) (filter (k' >) keys) = inFilter (k' >) (k ==) p1 keys k_in_keys in
-    indexG k l {k_in_keys = p2}
-  LTEquality p0 =>
-    let 0 p1 = \x, p => ( let p1' = replace {p = \arg => arg = LT} (equality2 k x k' (convEQ k x p)) p0 in let p1'' = cong (\case {LT => True; _ => False}) p1' in the (k' < x = True) p1'' ) in
-    let 0 p2 : In (k ==) (filter (k' <) keys) = inFilter (k' <) (k ==) p1 keys k_in_keys in
-    indexG k r {k_in_keys = p2}
-
--- Like GoodTree but BadRedNode can have red children
-data BadTree :
-  {height : Nat} ->
-  {kt : Type} ->
-  {kord : LawfulOrd kt} ->
-  {keys : List kt} ->
-  {vt : kt -> Type} -> Type
-  where
-  BadRedNode :
-    {0 kord : LawfulOrd kt} ->
-    (k : kt) ->
-    {0 kp : In (k ==) keys} ->
-    vt k ->
-    GoodTree {height, kt, kord, keys = filter (k >) keys, vt} ->
-    GoodTree {height, kt, kord, keys = filter (k <) keys, vt} ->
-    BadTree {height, kt, kord, keys, vt}
 
 lemma0 : LawfulOrd kt => {keys : List kt} -> (xk : kt) -> (yk : kt) -> In (yk ==) (filter (xk <) keys) -> (compare xk yk = LT)
 lemma0 xk yk p0 =
@@ -295,11 +158,11 @@ mutual
         {keys = k :: [], kp}
     )
   insertG' k v (AlsoRedNode k' v' l r {kp, keyslEq, keysrEq}) =
-    case orderingMatch (compare k k') of
-      LTEquality ltEq =>
+    case the (Subset Ordering (compare k k' ===)) $ Element (compare k k') Refl of
+      Element LT ltEq =>
         let (Evidence color' l', r') = insertLeft k v k' v' l r {ltEq, kp, keyslEq, keysrEq} in
         BadRedNode k' v' l' r' {kp = MkInCons k keys kp}
-      EQEquality p0 =>
+      Element EQ p0 =>
         let 0 p2 = funext (compare k') (compare k) (\x => equality1 k' k x (reversion3 k k' p0)) in
         -- Idris 2 parser is overly restrictive
         let 0 helper2 : ((f : Ordering -> Bool) -> {auto p1 : f EQ = False} -> (filter (\x => f (compare k' x)) keys = filter (\x => f (compare k x)) (k :: keys)))
@@ -319,11 +182,11 @@ mutual
               (replace {p = \arg => GoodTree {height, color = Black, kt, kord, vt, keys = arg}} keysrEq r)
         in
         BadRedNode k v l' r' {kp = MkIn k (cong (\case { EQ => True; _ => False }) (reflexivity k)) keys}
-      GTEquality gtEq =>
+      Element GT gtEq =>
         let (l', Evidence color' r') = insertRight k v k' v' l r {gtEq, kp, keyslEq, keysrEq} in
         BadRedNode k' v' l' r' {kp = MkInCons k keys kp}
-  insertG' k v whole@(AlsoBlackNode k' v' l r {kp, keysl, keyslEq, keysr, keysrEq, height = height'}) = case orderingMatch (compare k k') of
-    LTEquality ltEq =>
+  insertG' k v whole@(AlsoBlackNode k' v' l r {kp, keysl, keyslEq, keysr, keysrEq, height = height'}) = case the (Subset Ordering (compare k k' ===)) $ Element (compare k k') Refl of
+    Element LT ltEq =>
       case l of
         Empty =>
           let (Evidence color' l', r') = insertLeft k v k' v' l r {ltEq, kp, keyslEq, keysrEq} in
@@ -334,8 +197,8 @@ mutual
         (RedNode _ _ _ _) =>
           let (l', r') = insertLeft k v k' v' l r {kp, ltEq, keyslEq, keysrEq} in
           balanceLeft k' v' l' r' {kord}
-    EQEquality p0 => ?hgt
-    GTEquality gtEq =>
+    Element EQ p0 => ?hgt
+    Element GT gtEq =>
       case r of
         Empty =>
           let (l', Evidence color' r') = insertRight k v k' v' l r {gtEq, kp, keyslEq, keysrEq} in
@@ -346,25 +209,3 @@ mutual
         RedNode _ _ _ _ =>
           let (l', r') = insertRight k v k' v' l r {kp, gtEq, keyslEq, keysrEq} in
           balanceRight k' v' l' r' {kord}
-
-{-
-export
-data Tree : (kt : Type) -> (kord : LawfulOrd kt) => (kt -> Type) -> Type where
-  MkTree : GoodTree {height, color, kt, kord, vt, keys} -> Tree kt vt {kord}
-
-export
-empty : LawfulOrd kt => Tree kt vt
-empty = MkTree Empty
-
-export
-insert : LawfulOrd kt => (k : kt) -> vt k -> Tree kt vt -> Tree kt vt
-insert = ?insertHole
-
-export
-index : LawfulOrd kt => kt -> Tree kt vt -> Maybe (Exists vt)
-index = ?indexHole
-
-export
-index' : LawfullerOrd kt => (k : kt) -> Tree kt vt -> Maybe (vt k)
-index' = ?index'Hole
--}

@@ -1,3 +1,0 @@
-package rbtree
-
-modules = Data.RBTree, Data.In, Data.LawfulOrd

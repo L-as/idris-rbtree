@@ -1,4 +1,4 @@
-module Data.LawfulOrd
+module TypedContainers.LawfulOrd
 
 public export
 interface LawfulOrd a where

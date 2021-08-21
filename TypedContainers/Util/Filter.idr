@@ -40,14 +40,17 @@ filterCommutative' (x :: xs) yys p =
         MkDPair True p5 => rewrite p5 in rewrite p0 in p4
         MkDPair False p5 => rewrite p5 in p4
 
+public export
 0 filterCommutative : (filter f (filter g l) = filter g (filter f l))
 filterCommutative = filterCommutative' {f, g} l (filter f (filter g l)) Refl
 
 0 filterImplication' :
   {f : a -> Bool} -> {g : a -> Bool}
-  -> ((x : a) -> (f x = True) -> (g x = True)) -> (xxs : List a) -> (yys : List a)
-  -> (yys = filter f (filter g xxs)) -> (yys = filter f l)
+  -> ((x : a) -> (g x = True) -> (f x = True)) -> (xxs : List a) -> (yys : List a)
+  -> (yys = filter f (filter g xxs)) -> (yys = filter f xxs)
+filterImplication' p0 [] yys p1 = p1
+filterImplication' p0 (x :: xs) yys p1 = ?h0
 
 public export
-0 filterImplication : ((x : a) -> (f x = True) -> (g x = True)) -> (filter f (filter g l) = filter f l)
+0 filterImplication : ((x : a) -> (g x = True) -> (f x = True)) -> (filter f (filter g l) = filter f l)
 filterImplication p = filterImplication' {f, g} p l (filter f (filter g l)) Refl

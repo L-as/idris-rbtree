@@ -7,6 +7,8 @@ import TypedContainers.In
 import TypedContainers.LawfulOrd
 import TypedContainers.RBTree.Base
 
+%default total
+
 helper : LawfulOrd a => (x : a) -> (y : a) -> (z : a) -> (x > y = True) -> (y == z = True) -> (x > z = True)
 helper x y z p1 p2 =
   let p1' = convGT x y p1 in
@@ -15,8 +17,9 @@ helper x y z p1 p2 =
   let p4 : (compare x z = GT) = replace {p = \arg => arg = GT} p3 p1' in
   cong (\case {GT => True; _ => False}) p4
 
+public export
 indexG : {0 keys : List kt} -> {kord : LawfulOrd kt} -> (k : kt) -> {0 k_in_keys : In (k ==) keys} -> GoodTree {kt, kord, keys, vt} -> Exists $ \k' => Exists $ \_ : compare k' k = EQ => vt k'
-indexG k Empty impossible
+indexG k (Empty Refl) impossible
 indexG k (RedNode k' v l r) = case the (Subset Ordering (compare k' k ===)) $ Element (compare k' k) Refl of
   Element EQ p0 => Evidence k' $ Evidence p0 v
   Element GT p0 =>

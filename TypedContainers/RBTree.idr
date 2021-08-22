@@ -18,25 +18,20 @@ import TypedContainers.RBTree.Base
 import TypedContainers.RBTree.Index
 import TypedContainers.RBTree.Insert
 
-
-{-
 export
-data Tree : (kt : Type) -> (kord : LawfulOrd kt) => (kt -> Type) -> Type where
-  MkTree : GoodTree {height, color, kt, kord, vt, keys} -> Tree kt vt {kord}
+data RBTree : (kt : Type) -> (kord : LawfulOrd kt) => (kt -> Type) -> Type where
+  MkRBTree : GoodTree {height, color, kt, kord, vt, keys} -> RBTree kt vt {kord}
 
 export
-empty : LawfulOrd kt => Tree kt vt
-empty = MkTree Empty
+empty : LawfulOrd kt => RBTree kt vt
+empty = MkRBTree (Empty Refl)
 
 export
-insert : LawfulOrd kt => (k : kt) -> vt k -> Tree kt vt -> Tree kt vt
-insert = ?insertHole
+insert : LawfulOrd kt => (k : kt) -> vt k -> RBTree kt vt -> RBTree kt vt
 
 export
-index : LawfulOrd kt => kt -> Tree kt vt -> Maybe (Exists vt)
-index = ?indexHole
+index : LawfulOrd kt => kt -> RBTree kt vt -> Maybe (Exists vt)
+--index k (MkRBTree tree) = indexG k tree
 
 export
-index' : LawfullerOrd kt => (k : kt) -> Tree kt vt -> Maybe (vt k)
-index' = ?index'Hole
--}
+index' : LawfullerOrd kt => (k : kt) -> RBTree kt vt -> Maybe (vt k)

@@ -6,6 +6,7 @@ import Data.List
 import TypedContainers.In
 import TypedContainers.LawfulOrd
 import TypedContainers.RBTree.Base
+import TypedContainers.Util.Filter
 
 -- TODO: Find out a way to do this without extensional function equality
 0 funext : (f : a -> b) -> (g : a -> b) -> ((x : a) -> f x = g x) -> (f = g)
@@ -30,26 +31,23 @@ lemma0 xk yk p0 =
   let p6 = convLT xk v p4 in
   trans p5 p6
 
+lemma1 : LawfulOrd kt => {keys : List kt} -> (xk : kt) -> (yk : kt) -> In (yk ==) (filter (xk >) keys) -> (compare xk yk = GT)
+lemma1 xk yk p0 =
+  let MkDPair v (p3, p4) = extractIn p0 in
+  let p5 = equality2 _ _ xk (convEQ _ _ p3) in
+  let p6 = convGT xk v p4 in
+  trans p5 p6
+
 balanceLeft :
   (kord : LawfulOrd kt) =>
   (zk : kt) ->
   {0 zkp : In (zk ==) keys} ->
   vt zk ->
-  {0 keyslEq : keysl = filter (zk >) keys} ->
-  BadTree {height, kt, kord, keys = keysl, vt} ->
-  {0 keysrEq : keysr = filter (zk <) keys} ->
-  GoodTree {height, color = colorRight, kt, kord, keys = keysr, vt} ->
+  BadTree {height, kt, kord, keys = filter (zk >) keys, vt} ->
+  GoodTree {height, color = colorRight, kt, kord, keys = filter (zk <) keys, vt} ->
   Exists \color : Color => GoodTree {height = S height, color, kt, kord, keys = keys, vt}
 balanceLeft zk zv (BadRedNode {kp = xkp} xk xv a (RedNode yk yv b c {kp = ykp})) d =
   let
-    0 ykp' : (In (yk ==) keysl) = outFilter ykp
-    0 ykp' : (In (yk ==) (filter (zk >) keys)) = rewrite sym keyslEq in ykp'
-    0 ykp' = outFilter ykp'
-
-    0 yk_gt_xk : (GT = compare yk xk) = sym $ reversion1 xk yk $ lemma0 xk yk ykp
-
-    0 xkp' : In (xk ==) keys = outFilter $ replace {p = \arg => In (xk ==) arg} keyslEq xkp
-
     0 p0 : (arg : kt) -> (xk == arg = True) -> (yk > arg = True)
     p0 arg prr =
       let pp0 = reversion1 xk yk $ lemma0 xk yk ykp in
@@ -57,13 +55,105 @@ balanceLeft zk zv (BadRedNode {kp = xkp} xk xv a (RedNode yk yv b c {kp = ykp}))
       let pp2 = trans (sym pp1) pp0 in
       cong (\case { GT => True; _ => False }) pp2
 
-    newleft := BlackNode xk xv (?ha a) (?hb b) {kp = inFilter (yk >) (xk ==) p0 _ xkp'}
+    0 p0' : (arg : kt) -> (zk == arg = True) -> (yk < arg = True)
+    p0' arg prr =
+      let pp0 = lemma1 zk yk (outFilter ykp) in
+      let pp1 = equality1 zk arg yk (convEQ zk arg prr) in
+      let pp2 = trans (sym pp1) pp0 in
+      cong (\case { LT => True; _ => False }) $ reversion2 arg yk pp2
+
+    0 p1 : (arg : kt) -> (xk > arg = True) -> (yk > arg = True)
+    p1 arg pp0 =
+      let pp1 : (compare arg xk = LT) = reversion2 xk arg $ convGT _ _ pp0 in
+      let pp2 : (compare xk yk = LT) = lemma0 xk yk ykp in
+      let pp3 : (compare arg yk = LT) = transitivity arg xk yk pp1 pp2 in
+      cong (\case { GT => True; _ => False }) $ reversion1 arg yk pp3
+
+    0 p1' : (arg : kt) -> (yk < arg = True) -> (xk < arg = True)
+    p1' arg pp0 =
+      let pp1 : (compare yk arg = LT) = convLT _ _ pp0 in
+      let pp2 : (compare xk arg = LT) = transitivity xk yk arg (lemma0 xk yk ykp) pp1 in
+      cong (\case { LT => True; _ => False }) pp2
+
+    0 p2 : (arg : kt) -> (yk > arg = True) -> (zk > arg = True)
+    p2 arg pp0 =
+      let pp1 : (compare arg yk = LT) = reversion2 yk arg $ convGT _ _ pp0 in
+      let pp2 : (compare yk zk = LT) = reversion2 zk yk $ lemma1 zk yk (outFilter ykp) in
+      let pp3 : (compare arg zk = LT) = transitivity arg yk zk pp1 pp2 in
+      cong (\case { GT => True; _ => False }) $ reversion1 arg zk pp3
+
+    0 p2' : (arg : kt) -> (zk < arg = True) -> (yk < arg = True)
+    p2' arg pp0 =
+      let pp1 : (compare zk arg = LT) = convLT _ _ pp0 in
+      let pp2 : (compare yk arg = LT) = transitivity yk zk arg (reversion2 zk yk $ lemma1 zk yk (outFilter ykp)) pp1 in
+      cong (\case { LT => True; _ => False }) pp2
+
+    0 p3 : ((filter (xk >) $ filter (zk >) keys) === (filter (xk >) $ filter (yk >) keys))
+    p3 =
+      let pp0 : ((filter (yk >) $ filter (xk >) $ filter (zk >) keys) === (filter (xk >) $ filter (zk >) keys))
+          = filterImplication {g = (xk >), f = (yk >)} p1
+      in
+      let pp1 : ((filter (xk >) $ filter (yk >) $ filter (zk >) keys) === (filter (yk >) $ filter (xk >) $ filter (zk >) keys))
+          = filterCommutative
+      in
+      let pp2 : ((filter (xk >) $ filter (zk >) $ filter (yk >) keys) === (filter (xk >) $ filter (yk >) $ filter (zk >) keys))
+          = cong (filter (xk >)) filterCommutative
+      in
+      let pp3 : ((filter (xk >) $ filter (yk >) keys) === (filter (xk >) $ filter (zk >) $ filter (yk >) keys))
+          = cong (filter (xk >)) $ sym $ filterImplication p2
+      in
+      sym $ trans pp3 $ trans pp2 $ trans pp1 pp0
+
+    0 p4 : ((filter (yk >) $ filter (xk <) $ filter (zk >) keys) === (filter (xk <) $ filter (yk >) keys))
+    p4 =
+      let pp0 : ((filter (xk <) $ filter (yk >) $ filter (zk >) keys) === (filter (yk >) $ filter (xk <) $ filter (zk >) keys))
+          = filterCommutative
+      in
+      let pp1 : ((filter (xk <) $ filter (zk >) $ filter (yk >) keys) === (filter (xk <) $ filter (yk >) $ filter (zk >) keys))
+          = cong (filter (xk <)) filterCommutative
+      in
+      let pp2 : ((filter (xk <) $ filter (yk >) keys) === (filter (xk <) $ filter (zk >) $ filter (yk >) keys))
+          = cong (filter (xk <)) $ sym $ filterImplication p2
+      in
+      sym $ trans pp2 $ trans pp1 pp0
+
+    0 p5 : ((filter (yk <) $ filter (xk <) $ filter (zk >) keys) === (filter (zk >) $ filter (yk <) keys))
+    p5 =
+      let pp0 : ((filter (xk <) $ filter (yk <) $ filter (zk >) keys) === (filter (yk <) $ filter (xk <) $ filter (zk >) keys))
+          = filterCommutative
+      in
+      let pp1 : ((filter (yk <) $ filter (zk >) keys) === (filter (xk <) $ filter (yk <) $ filter (zk >) keys))
+          = sym $ filterImplication p1'
+      in
+      let pp2 : ((filter (zk >) $ filter (yk <) keys) === (filter (yk <) $ filter (zk >) keys))
+          = filterCommutative
+      in
+      sym $ trans pp2 $ trans pp1 pp0
+
+    0 p6 : (filter (zk <) keys) === (filter (zk <) $ filter (yk <) keys)
+    p6 =
+      let pp0 : ((filter (yk <) $ filter (zk <) keys) === (filter (zk <) keys))
+          = filterImplication p2'
+      in
+      let pp1 : ((filter (zk <) $ filter (yk <) keys) === (filter (yk <) $ filter (zk <) keys))
+          = filterCommutative
+      in
+      sym $ trans pp1 pp0
   in
-  Evidence Red $ RedNode yk yv newleft ?r {kp = ykp'}
---balanceLeft zk zv (BadRedNode yk yv (RedNode xk xv a b) c) d = Evidence Red $ RedNode yk yv (BlackNode xk xv a b) (BlackNode zk zv c d)
---balanceLeft xk xv (BadRedNode yk yv (BlackNode zk zv a b) (BlackNode wk wv c d)) e = Evidence Black $ BlackNode xk xv (RedNode yk yv (BlackNode zk zv a b) (BlackNode wk wv c d)) e
---balanceLeft xk xv (BadRedNode yk yv Empty Empty) e = Evidence Black $ BlackNode xk xv (RedNode yk yv Empty Empty) e
-balanceLeft _ _ _ _ = ?balanceLeftHole
+  let a' : GoodTree {keys = filter (xk >) $ filter (yk >) keys} = rewrite sym p3 in a in
+  let b' : GoodTree {keys = filter (xk <) $ filter (yk >) keys} = rewrite sym p4 in b in
+  let c' : GoodTree {keys = filter (zk >) $ filter (yk <) keys} = rewrite sym p5 in c in
+  let d' : GoodTree {keys = filter (zk <) $ filter (yk <) keys} = rewrite sym p6 in d in
+  let l' = BlackNode xk xv a' b' {kp = inFilter (yk >) (xk ==) p0 _ (outFilter xkp)} in
+  let r' = BlackNode zk zv c' d' {kp = inFilter (yk <) (zk ==) p0' _ zkp} in
+  Evidence Red $ RedNode yk yv l' r' {kp = outFilter $ outFilter ykp}
+balanceLeft zk zv (BadRedNode {kp = ykp} yk yv (RedNode xk xv a b {kp = xkp}) c) d = ?h0
+balanceLeft zk zv (BadRedNode {kp = ykp} yk yv a@(BlackNode _ _ _ _) b@(BlackNode _ _ _ _)) c =
+  Evidence Black $ BlackNode {kp = zkp} zk zv (RedNode {kp = ykp} yk yv a b) c
+balanceLeft zk zv (BadRedNode {kp = ykp} yk yv a@(BlackNode _ _ _ _) b@(Empty _)) c impossible
+balanceLeft zk zv (BadRedNode {kp = ykp} yk yv a@(Empty _) b@(BlackNode _ _ _ _)) c impossible
+balanceLeft zk zv (BadRedNode {kp = ykp} yk yv a@(Empty _) b@(Empty _)) c =
+  Evidence Black $ BlackNode {kp = zkp} zk zv (RedNode {kp = ykp} yk yv a b) c
 
 balanceRight :
   (kord : LawfulOrd kt) =>
@@ -184,7 +274,7 @@ mutual
       Element GT gtEq =>
         let (l', Evidence color' r') = insertRight k v k' v' l r {gtEq, kp, keyslEq = Refl, keysrEq = Refl} in
         BadRedNode k' v' l' r' {kp = MkInCons k keys kp}
-  insertG k v whole@(BlackNode k' v' l r {kp, height = height'}) = case the (Subset Ordering (compare k k' ===)) $ Element (compare k k') Refl of
+  insertG k v (BlackNode k' v' l r {kp, height = height'}) = case the (Subset Ordering (compare k k' ===)) $ Element (compare k k') Refl of
     Element LT ltEq =>
       case l of
         Empty _ =>

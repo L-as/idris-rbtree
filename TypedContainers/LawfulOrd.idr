@@ -1,5 +1,7 @@
 module TypedContainers.LawfulOrd
 
+%default total
+
 public export
 interface LawfulOrd a where
   compare : a -> a -> Ordering

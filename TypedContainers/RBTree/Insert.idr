@@ -8,7 +8,10 @@ import TypedContainers.LawfulOrd
 import TypedContainers.RBTree.Base
 import TypedContainers.Util.Filter
 
+%default total
+
 -- TODO: Find out a way to do this without extensional function equality
+partial
 0 funext : (f : a -> b) -> (g : a -> b) -> ((x : a) -> f x = g x) -> (f = g)
 funext = funext
 

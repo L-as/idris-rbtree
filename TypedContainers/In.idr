@@ -4,6 +4,8 @@ import Data.List
 import Data.List.Elem
 import Data.DPair
 
+%default total
+
 lemma0 : ([x] = [y]) -> (x = y)
 lemma0 Refl = Refl
 

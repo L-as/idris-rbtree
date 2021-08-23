@@ -18,6 +18,8 @@ import TypedContainers.RBTree.Base
 import TypedContainers.RBTree.Index
 import TypedContainers.RBTree.Insert
 
+%default total
+
 export
 data RBTree : (kt : Type) -> (kord : LawfulOrd kt) => (kt -> Type) -> Type where
   MkRBTree : GoodTree {height, color, kt, kord, vt, keys} -> RBTree kt vt {kord}

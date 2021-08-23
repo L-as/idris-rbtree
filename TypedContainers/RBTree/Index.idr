@@ -41,3 +41,18 @@ indexG k (BlackNode k' v l r) = case the (Subset Ordering (compare k' k ===)) $ 
     let 0 p2 : In (k ==) (filter (k' <) keys) = inFilter (k' <) (k ==) p1 keys k_in_keys in
     indexG k r {k_in_keys = p2}
 
+public export
+indexGMaybe : {0 keys : List kt} -> {kord : LawfulOrd kt} -> (k : kt) -> GoodTree {kt, kord, keys, vt}
+  -> Either (Not $ In (k ==) keys) (DPair kt $ \k' => Exists $ \_ : (compare k' k = EQ, In (k' == ) keys) => vt k')
+indexGMaybe k (Empty Refl) = Left $ \p => case p of
+  MkIn _ _ _ impossible
+  MkInCons _ _ _ impossible
+indexGMaybe k (RedNode k' v l r {kp}) = case the (Subset Ordering (compare k' k ===)) $ Element (compare k' k) Refl of
+  Element EQ p0 => Right $ MkDPair k' $ Evidence (p0, kp) v
+  Element GT p0 => ?h2 -- Challenge: We need to do tail recursion, but somehow append to the returned proofs
+  Element LT p0 => ?h3
+indexGMaybe k (BlackNode k' v l r) = case the (Subset Ordering (compare k' k ===)) $ Element (compare k' k) Refl of
+  Element EQ p0 => Right $ MkDPair k' $ Evidence (p0, ?h4) v
+  Element GT p0 => ?h5
+  Element LT p0 => ?h6
+indexGMaybe _ _ = ?h0

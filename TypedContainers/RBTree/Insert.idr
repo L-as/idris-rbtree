@@ -379,3 +379,21 @@ mutual
         RedNode _ _ _ _ =>
           let (l', r') = insertRight k v k' v' l r {kp, gtEq, keyslEq = Refl, keysrEq = Refl} in
           balanceRight k' v' l' r' {kord, zkp = MkInCons _ _ kp}
+
+public export
+insertG' :
+  {0 color : Color} ->
+  (kord : LawfulOrd kt) =>
+  (k : kt) ->
+  vt k ->
+  GoodTree {kt, height, color, kord, vt, keys} ->
+  Exists \color' => Exists \height' => GoodTree {color = color', height = height', kt, kord, vt, keys = k :: keys}
+insertG' k v tree@(Empty Refl) =
+  let Evidence color' tree' = insertG k v tree in
+  Evidence color' $ Evidence 0 tree'
+insertG' k v tree@(BlackNode _ _ _ _ {height = height'}) =
+  let Evidence color' tree' = insertG k v tree in
+  Evidence color' $ Evidence (S height') tree'
+insertG' k v tree@(RedNode _ _ _ _) =
+  let BadRedNode k' v' l r {height = height', kp} = insertG k v tree in
+  Evidence Black $ Evidence (S height') $ BlackNode k' v' l r {kp}

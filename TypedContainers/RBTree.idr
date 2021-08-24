@@ -30,8 +30,8 @@ empty = MkRBTree (Empty Refl)
 
 export
 insert : LawfulOrd kt => (k : kt) -> vt k -> RBTree kt vt -> RBTree kt vt
-insert k v tree =
-  let Evidence _ (Evidence _ tree) = insertG' k v tree in
+insert k v (MkRBTree tree) =
+  let Evidence _ (Evidence _ tree') = insertG' k v tree in
   MkRBTree tree'
 
 export

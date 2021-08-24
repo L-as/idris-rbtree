@@ -32,8 +32,8 @@ data GoodTree :
     (k : kt) ->
     {0 kp : In (k ==) keys} ->
     vt k ->
-    GoodTree {height, kt, kord, keys = filter (k >) keys, vt} ->
-    GoodTree {height, kt, kord, keys = filter (k <) keys, vt} ->
+    GoodTree {height, color = colorLeft, kt, kord, keys = filter (k >) keys, vt} ->
+    GoodTree {height, color = colorRight, kt, kord, keys = filter (k <) keys, vt} ->
     GoodTree {height = S height, color = Black, kt, kord, keys, vt}
 
 -- Like GoodTree but BadRedNode can have red children

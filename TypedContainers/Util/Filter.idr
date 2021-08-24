@@ -68,3 +68,25 @@ filterImplication' p0 (x :: xs) yys p1 =
 public export
 0 filterImplication : ((x : a) -> (g x = True) -> (f x = True)) -> (filter f (filter g l) = filter g l)
 filterImplication p = filterImplication' {f, g} p l (filter f (filter g l)) Refl
+
+0 filterExtensionality' : {f : a -> Bool} -> {g : a -> Bool} -> {p : (x : a) -> f x = g x} -> (l : List a) -> (filter f l = filter g l)
+filterExtensionality' [] = Refl
+filterExtensionality' (x :: xs) =
+  let rec = filterExtensionality' {f, g, p} xs in
+  case MkDPair (f x) Refl {p = (f x ===)} of
+    MkDPair True p0 =>
+      let p1 : (g x = True) = rewrite sym $ p x in p0 in
+      rewrite p1 in
+      rewrite p0 in
+      rewrite rec in
+      Refl
+    MkDPair False p0 =>
+      let p1 : (g x = False) = rewrite sym $ p x in p0 in
+      rewrite p1 in
+      rewrite p0 in
+      rewrite rec in
+      Refl
+
+public export
+0 filterExtensionality : ((x : a) -> f x = g x) -> (filter f l = filter g l)
+filterExtensionality p = filterExtensionality' {p} l

@@ -227,12 +227,9 @@ balanceRight :
   (zk : kt) ->
   {0 zkp : In (zk ==) keys} ->
   vt zk ->
-  {0 keyslEq : keysl = filter (zk >) keys} ->
-  GoodTree {height, color = colorLeft, kt, kord, keys = keysl, vt} ->
-  {0 keysrEq : keysr = filter (zk <) keys} ->
-  BadTree {height, kt, kord, keys = keysr, vt} ->
-  Exists \color : Color => GoodTree {height = S height, color, kt, kord, keys = keys, vt}
-balanceRight = ?balanceRightHole
+  GoodTree {height, color = colorLeft, kt, kord, keys = filter (zk >) keys, vt} ->
+  BadTree {height, kt, kord, keys = filter (zk <) keys, vt} ->
+  Exists \color : Color => GoodTree {height = S height, color, kt, kord, keys, vt}
 
 mutual
   insertLeft :
@@ -341,7 +338,7 @@ mutual
       Element GT gtEq =>
         let (l', Evidence color' r') = insertRight k v k' v' l r {gtEq, kp, keyslEq = Refl, keysrEq = Refl} in
         BadRedNode k' v' l' r' {kp = MkInCons k keys kp}
-  insertG k v (BlackNode k' v' l r {kp, height = height'}) = case the (Subset Ordering (compare k k' ===)) $ Element (compare k k') Refl of
+  insertG k v (BlackNode k' v' l r {kp, height = height', colorLeft, colorRight}) = case the (Subset Ordering (compare k k' ===)) $ Element (compare k k') Refl of
     Element LT ltEq =>
       case l of
         Empty _ =>
@@ -352,8 +349,28 @@ mutual
           Evidence Black $ BlackNode k' v' l' r' {kp = MkInCons k keys kp}
         RedNode _ _ _ _ =>
           let (l', r') = insertLeft k v k' v' l r {kp, ltEq, keyslEq = Refl, keysrEq = Refl} in
-          balanceLeft k' v' l' r' {kord}
-    Element EQ p0 => ?insertG_BlackEQ
+          balanceLeft k' v' l' r' {kord, zkp = MkInCons _ _ kp}
+    Element EQ p0 =>
+        let
+          0 p5 : (x : kt) -> (k > x = k' > x)
+          p5 x = cong (\case { GT => True; _ => False }) $ equality1 k k' x p0
+
+          0 p6 : (x : kt) -> (k < x = k' < x)
+          p6 x = cong (\case { LT => True; _ => False }) $ equality1 k k' x p0
+        in
+        let 0 p1 : (filter (k >) keys = (filter (k' >) keys)) = filterExtensionality p5 in
+        let 0 p2 : (filter (k >) (k :: keys) = filter (k >) keys)
+            = rewrite reflexivity k in Refl in
+        let 0 p3 : (filter (k <) keys = (filter (k' <) keys)) = filterExtensionality p6 in
+        let 0 p4 : (filter (k <) (k :: keys) = filter (k <) keys)
+            = rewrite reflexivity k in Refl in
+        let l' : GoodTree {color = colorLeft, height = height', kt, kord, vt, keys = filter (k >) (k :: keys)} =
+            rewrite trans p2 p1 in l
+        in
+        let r' : GoodTree {color = colorRight, height = height', kt, kord, vt, keys = filter (k <) (k :: keys)} =
+            rewrite trans p4 p3 in r
+        in
+        Evidence Black $ BlackNode k v l' r' {kp = MkIn k (cong (\case { EQ => True; _ => False }) (reflexivity k)) keys}
     Element GT gtEq =>
       case r of
         Empty _ =>
@@ -364,4 +381,4 @@ mutual
           Evidence Black $ BlackNode k' v' l' r' {kp = MkInCons k keys kp}
         RedNode _ _ _ _ =>
           let (l', r') = insertRight k v k' v' l r {kp, gtEq, keyslEq = Refl, keysrEq = Refl} in
-          balanceRight k' v' l' r' {kord}
+          balanceRight k' v' l' r' {kord, zkp = MkInCons _ _ kp}

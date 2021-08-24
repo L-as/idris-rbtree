@@ -10,11 +10,6 @@ import TypedContainers.Util.Filter
 
 %default total
 
--- TODO: Find out a way to do this without extensional function equality
-partial
-0 funext : (f : a -> b) -> (g : a -> b) -> ((x : a) -> f x = g x) -> (f = g)
-funext = funext
-
 GoodBadTree :
   {height : Nat} ->
   {kt : Type} ->
@@ -317,22 +312,24 @@ mutual
         let (Evidence color' l', r') = insertLeft k v k' v' l r {ltEq, kp, keyslEq = Refl, keysrEq = Refl} in
         BadRedNode k' v' l' r' {kp = MkInCons k keys kp}
       Element EQ p0 =>
-        let 0 p2 = funext (compare k') (compare k) (\x => equality1 k' k x (reversion3 k k' p0)) in
-        let 0 helper2 : ((f : Ordering -> Bool) -> {auto p1 : f EQ = False} -> (filter (\x => f (compare k' x)) keys = filter (\x => f (compare k x)) (k :: keys)))
-            helper2 f {p1} =
-              rewrite reflexivity k in
-              rewrite p1 in
-              cong (\arg => filter (\x => f (arg x)) keys) p2
+        let
+          0 p5 : (x : kt) -> (k > x = k' > x)
+          p5 x = cong (\case { GT => True; _ => False }) $ equality1 k k' x p0
+
+          0 p6 : (x : kt) -> (k < x = k' < x)
+          p6 x = cong (\case { LT => True; _ => False }) $ equality1 k k' x p0
         in
-        let l' : GoodTree {color = Black, height, kt, kord, vt, keys = filter (k >) (k :: keys)} =
-            replace {p = \arg => GoodTree {color = Black, height, kt, kord, vt, keys = arg}}
-              (helper2 (\case { GT => True; _ => False }))
-              l
+        let 0 p1 : (filter (k >) keys = (filter (k' >) keys)) = filterExtensionality p5 in
+        let 0 p2 : (filter (k >) (k :: keys) = filter (k >) keys)
+            = rewrite reflexivity k in Refl in
+        let 0 p3 : (filter (k <) keys = (filter (k' <) keys)) = filterExtensionality p6 in
+        let 0 p4 : (filter (k <) (k :: keys) = filter (k <) keys)
+            = rewrite reflexivity k in Refl in
+        let l' : GoodTree {kt, kord, vt, keys = filter (k >) (k :: keys)} =
+            rewrite trans p2 p1 in l
         in
-        let r' : GoodTree {color = Black, height, kt, kord, vt, keys = filter (k <) (k :: keys)} =
-            replace {p = \arg => GoodTree {color = Black, height, kt, kord, vt, keys = arg}}
-              (helper2 (\case { LT => True; _ => False }))
-              r
+        let r' : GoodTree {kt, kord, vt, keys = filter (k <) (k :: keys)} =
+            rewrite trans p4 p3 in r
         in
         BadRedNode k v l' r' {kp = MkIn k (cong (\case { EQ => True; _ => False }) (reflexivity k)) keys}
       Element GT gtEq =>

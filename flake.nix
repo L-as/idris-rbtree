@@ -1,5 +1,5 @@
 {
-  description = "Some common containers in Idris 2";
+  description = "Well-typed containers for Idris 2";
 
   inputs.flake-utils.url = "github:numtide/flake-utils";
   inputs.idris = {
@@ -12,7 +12,7 @@
     let pkgs = nixpkgs.legacyPackages.${system}; in
     rec {
       packages = idris.buildIdris.${system} {
-        projectName = "containers";
+        projectName = "typed-containers";
         src = "${self}";
         idrisLibraries = [];
       };

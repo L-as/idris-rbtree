@@ -13,7 +13,7 @@ public export
 data Erased : Type -> Type where
   MkErased : (0 _ : a) -> Erased a
 
-helper : LawfulOrd a => (x : a) -> (y : a) -> (z : a) -> (x > y = True) -> (y == z = True) -> (x > z = True)
+0 helper : LawfulOrd a => (x : a) -> (y : a) -> (z : a) -> (x > y = True) -> (y == z = True) -> (x > z = True)
 helper x y z p1 p2 =
   let p1' = convGT x y p1 in
   let p2' = convEQ y z p2 in

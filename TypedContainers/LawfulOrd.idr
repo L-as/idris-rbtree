@@ -5,13 +5,13 @@ module TypedContainers.LawfulOrd
 public export
 interface LawfulOrd a where
   compare : a -> a -> Ordering
-  reflexivity : (x : a) -> (compare x x = EQ)
-  reversion1 : (x : a) -> (y : a) -> (compare x y = LT) -> (compare y x = GT)
-  reversion2 : (x : a) -> (y : a) -> (compare x y = GT) -> (compare y x = LT)
-  reversion3 : (x : a) -> (y : a) -> (compare x y = EQ) -> (compare y x = EQ)
-  transitivity : (x : a) -> (y : a) -> (z : a) -> (compare x y = LT) -> (compare y z = LT) -> (compare x z = LT)
-  equality1 : (x : a) -> (y : a) -> (z : a) -> (compare x y = EQ) -> (compare x z = compare y z)
-  equality2 : (x : a) -> (y : a) -> (z : a) -> (compare x y = EQ) -> (compare z x = compare z y)
+  0 reflexivity : (x : a) -> (compare x x = EQ)
+  0 reversion1 : (x : a) -> (y : a) -> (compare x y = LT) -> (compare y x = GT)
+  0 reversion2 : (x : a) -> (y : a) -> (compare x y = GT) -> (compare y x = LT)
+  0 reversion3 : (x : a) -> (y : a) -> (compare x y = EQ) -> (compare y x = EQ)
+  0 transitivity : (x : a) -> (y : a) -> (z : a) -> (compare x y = LT) -> (compare y z = LT) -> (compare x z = LT)
+  0 equality1 : (x : a) -> (y : a) -> (z : a) -> (compare x y = EQ) -> (compare x z = compare y z)
+  0 equality2 : (x : a) -> (y : a) -> (z : a) -> (compare x y = EQ) -> (compare z x = compare z y)
 
 public export
 interface LawfulOrd a => LawfullerOrd a where

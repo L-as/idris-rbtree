@@ -27,14 +27,14 @@ GoodBadTree c = case c of
   Black => Exists \color' => GoodTree {color = color', height, kt, kord, vt, keys}
   Red => BadTree {height, kt, kord, vt, keys}
 
-lemma0 : LawfulOrd kt => {keys : List kt} -> (xk : kt) -> (yk : kt) -> In (yk ==) (filter (xk <) keys) -> (compare xk yk = LT)
+0 lemma0 : LawfulOrd kt => {keys : List kt} -> (xk : kt) -> (yk : kt) -> In (yk ==) (filter (xk <) keys) -> (compare xk yk = LT)
 lemma0 xk yk p0 =
   let MkDPair v (p3, p4) = extractIn p0 in
   let p5 = equality2 _ _ xk (convEQ _ _ p3) in
   let p6 = convLT xk v p4 in
   trans p5 p6
 
-lemma1 : LawfulOrd kt => {keys : List kt} -> (xk : kt) -> (yk : kt) -> In (yk ==) (filter (xk >) keys) -> (compare xk yk = GT)
+0 lemma1 : LawfulOrd kt => {keys : List kt} -> (xk : kt) -> (yk : kt) -> In (yk ==) (filter (xk >) keys) -> (compare xk yk = GT)
 lemma1 xk yk p0 =
   let MkDPair v (p3, p4) = extractIn p0 in
   let p5 = equality2 _ _ xk (convEQ _ _ p3) in
@@ -243,7 +243,7 @@ mutual
     GoodTree {kt, height, color, kord, vt, keys} ->
     GoodBadTree color {height, kt, kord, vt, keys = k :: keys}
   insertG k v (Empty Refl) =
-    let kp : (In (k ==) (k :: [])) = MkIn k (cong (\case {EQ => True; _ => False}) $ reflexivity k) [] in
+    let 0 kp : (In (k ==) (k :: [])) = MkIn k (cong (\case {EQ => True; _ => False}) $ reflexivity k) [] in
     Evidence Red (
       RedNode k v
         (rewrite reflexivity k in Empty Refl)

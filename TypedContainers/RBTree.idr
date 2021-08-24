@@ -32,8 +32,17 @@ export
 insert : LawfulOrd kt => (k : kt) -> vt k -> RBTree kt vt -> RBTree kt vt
 
 export
-index : LawfulOrd kt => kt -> RBTree kt vt -> Maybe (Exists vt)
---index k (MkRBTree tree) = indexG k tree
+index : LawfulOrd kt => kt -> RBTree kt vt -> Maybe (DPair kt vt)
+index k (MkRBTree tree) =
+  case indexGMaybe k tree {foldRight = \_, _ => (), foldLeft = id} of
+    Left _ => Nothing
+    Right (MkDPair k' $ Evidence _ v) => Just $ MkDPair k' v
 
 export
 index' : LawfullerOrd kt => (k : kt) -> RBTree kt vt -> Maybe (vt k)
+index' k (MkRBTree tree) =
+  case indexGMaybe k tree {foldRight = \k', (p, _) => p, foldLeft = id} of
+    Left _ => Nothing
+    Right (MkDPair k' $ Evidence p v) =>
+      let 0 p = realEquality k' k p in
+      Just $ rewrite sym p in v

@@ -8,3 +8,6 @@ Features:
 
 TODO:
 - Implement insertion...
+
+The algorithm is taken from *Purely functional data structures* by Chris Okasaki.
+The proofs were mostly left as an exercise to the reader.

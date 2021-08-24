@@ -222,6 +222,12 @@ balanceRight xk xv a (BadRedNode {kp = zkp} zk zv (RedNode yk yv b c {kp = ykp})
       let pp2 : (compare xk arg = LT) = transitivity xk yk arg (lemma0 xk yk (outFilter ykp)) pp1 in
       cong (\case { LT => True; _ => False }) pp2
 
+    0 p0' : (arg : kt) -> (zk < arg = True) -> (yk < arg = True)
+    p0' arg pp0 =
+      let pp1 : (compare zk arg = LT) = convLT _ _ pp0 in
+      let pp2 : (compare yk arg = LT) = transitivity yk zk arg (reversion2 zk yk $ lemma1 zk yk ykp) pp1 in
+      cong (\case { LT => True; _ => False }) pp2
+
     0 p1 : (arg : kt) -> (yk > arg = True) -> (zk > arg = True)
     p1 arg pp0 =
       let pp1 : (compare arg yk = LT) = reversion2 yk arg $ convGT _ _ pp0 in
@@ -248,13 +254,39 @@ balanceRight xk xv a (BadRedNode {kp = zkp} zk zv (RedNode yk yv b c {kp = ykp})
       $ trans (cong (filter (zk >)) filterCommutative) filterCommutative
 
     0 p6 : (filter (zk <) $ filter (yk <) keys) === (filter (zk <) $ filter (xk <) keys)
+    p6 =
+      let
+        pp0 : (filter (yk <) $ filter (zk <) $ filter (xk <) keys) === (filter (zk <) $ filter (xk <) keys)
+        pp0 = filterImplication p0'
+        pp1 : (filter (yk <) $ filter (xk <) $ filter (zk <) keys) === (filter (yk <) $ filter (zk <) $ filter (xk <) keys)
+        pp1 = cong (filter (yk <)) filterCommutative
+        pp2 : (filter (xk <) $ filter (yk <) $ filter (zk <) keys) === (filter (yk <) $ filter (xk <) $ filter (zk <) keys)
+        pp2 = filterCommutative
+        pp3 : (filter (yk <) $ filter (zk <) keys) === (filter (xk <) $ filter (yk <) $ filter (zk <) keys)
+        pp3 = sym $ filterImplication p0
+        pp4 : (filter (zk <) $ filter (yk <) keys) === (filter (yk <) $ filter (zk <) keys)
+        pp4 = filterCommutative
+      in
+      trans pp4 $ trans pp3 $ trans pp2 $ trans pp1 pp0
+
+    0 p7 : (arg : kt) -> (xk == arg = True) -> (yk > arg = True)
+    p7 arg pp0 =
+      let pp1 = lemma0 xk yk (outFilter ykp) in
+      let pp2 = trans (sym pp1) $ equality1 xk arg yk (convEQ xk arg pp0) in
+      cong (\case { GT => True; _ => False }) $ reversion1 arg yk $ sym pp2
+
+    0 p8 : (arg : kt) -> (zk == arg = True) -> (yk < arg = True)
+    p8 arg pp0 =
+      let pp1 = lemma1 zk yk ykp in
+      let pp2 = trans (sym pp1) $ equality1 zk arg yk (convEQ zk arg pp0) in
+      cong (\case { LT => True; _ => False }) $ reversion2 arg yk $ sym pp2
   in
   let a' : GoodTree {keys = filter (xk >) $ filter (yk >) keys} = rewrite p3 in a in
   let b' : GoodTree {keys = filter (xk <) $ filter (yk >) keys} = rewrite p4 in b in
   let c' : GoodTree {keys = filter (zk >) $ filter (yk <) keys} = rewrite p5 in c in
   let d' : GoodTree {keys = filter (zk <) $ filter (yk <) keys} = rewrite p6 in d in
-  let l' = BlackNode xk xv a' b' {kp = ?h7} in
-  let r' = BlackNode zk zv c' d' {kp = ?h8} in
+  let l' = BlackNode xk xv a' b' {kp = inFilter (yk >) (xk ==) p7 _ xkp} in
+  let r' = BlackNode zk zv c' d' {kp = inFilter (yk <) (zk ==) p8 _ (outFilter zkp)} in
   Evidence Red $ RedNode yk yv l' r' {kp = outFilter $ outFilter ykp}
 balanceRight xk xv a (BadRedNode {kp = ykp} yk yv b (RedNode zk zv c d {kp = zkp})) = ?h1
 balanceRight _ _ _ (BadRedNode _ _ (Empty _) (BlackNode _ _ _ _)) impossible
@@ -263,4 +295,3 @@ balanceRight xk xv a (BadRedNode {kp = ykp} yk yv b@(BlackNode _ _ _ _) c@(Black
   Evidence Black $ BlackNode {kp = xkp} xk xv a (RedNode {kp = ykp} yk yv b c)
 balanceRight xk xv a (BadRedNode {kp = ykp} yk yv b@(Empty _) c@(Empty _)) =
   Evidence Black $ BlackNode {kp = xkp} xk xv a (RedNode {kp = ykp} yk yv b c)
-balanceRight _ _ _ _ = ?h0

@@ -27,11 +27,11 @@
         "nixpkgs-chez-racket": "nixpkgs-chez-racket"
       },
       "locked": {
-        "lastModified": 1627489372,
-        "narHash": "sha256-248XBmB+kU5mu3gQ85UD51pgfBcCdFTy5dAONHNKipE=",
+        "lastModified": 1628167414,
+        "narHash": "sha256-sKmRDXAiFM89a9hKAN7j5MsJdXImsknsipaWXLJsc2I=",
         "owner": "L-as",
         "repo": "Idris2",
-        "rev": "0e005d9c8baee9d47c8890109524b231702646b4",
+        "rev": "06552b9660c21ea6e9d3e114d57990348f40f5e3",
         "type": "github"
       },
       "original": {
@@ -73,10 +73,10 @@
     "nixpkgs-chez-racket": {
       "locked": {
         "lastModified": 1627484694,
-        "narHash": "sha256-zWXkgZKxHYvGZcFvHxwdXKVSjwJCJpl90QydrOVHvM0=",
+        "narHash": "sha256-UsEb5G0ZJ8l/2y9u9FNj2akXx2PC5QAan24U3t32cfI=",
         "owner": "L-as",
         "repo": "nixpkgs",
-        "rev": "1ad518f582d8ef8263e45e0de4d728c395bce8e4",
+        "rev": "9b3c4bee8cee477ac03b0cfd4ebca40954c66106",
         "type": "github"
       },
       "original": {

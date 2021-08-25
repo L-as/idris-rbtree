@@ -42,7 +42,7 @@ mutual
       GoodTree {color = colorRight, height, kt, kord, vt, keys = filter (k' <) (k :: keys)}
     )
   insertLeft k v k' v' l r =
-    let l' = insertG k v l in
+    let l' = insertG' k v l in
     let 0 p1 = reversion1 k k' ltEq in
     let 0 p2 = cong (\case { GT => True; _ => False }) p1 in
     let 0 p3 : (k :: filter (k' >) keys = filter (k' >) (k :: keys)) = rewrite p2 in Refl in
@@ -74,7 +74,7 @@ mutual
       GoodBadTree colorRight {height, kt, kord, vt, keys = filter (k' <) (k :: keys)}
     )
   insertRight k v k' v' l r =
-    let r' = insertG k v r in
+    let r' = insertG' k v r in
     let 0 p1 = reversion2 k k' gtEq in
     let 0 p2 = cong (\case { LT => True; _ => False }) p1 in
     let 0 p3 : (k :: filter (k' <) keys = filter (k' <) (k :: keys)) = rewrite p2 in Refl in
@@ -88,14 +88,14 @@ mutual
     in
     (l', r'')
 
-  insertG :
+  insertG' :
     {0 color : Color} ->
     (kord : LawfulOrd kt) =>
     (k : kt) ->
     vt k ->
     GoodTree {kt, height, color, kord, vt, keys} ->
     GoodBadTree color {height, kt, kord, vt, keys = k :: keys}
-  insertG k v (Empty Refl) =
+  insertG' k v (Empty Refl) =
     let 0 kp : (In (k ==) (k :: [])) = MkIn k (cong (\case {EQ => True; _ => False}) $ reflexivity k) [] in
     Evidence Red (
       RedNode k v
@@ -103,7 +103,7 @@ mutual
         (rewrite reflexivity k in Empty Refl)
         {keys = k :: [], kp}
     )
-  insertG k v (RedNode k' v' l r {kp}) =
+  insertG' k v (RedNode k' v' l r {kp}) =
     case the (Subset Ordering (compare k k' ===)) $ Element (compare k k') Refl of
       Element LT ltEq =>
         let (Evidence color' l', r') = insertLeft k v k' v' l r {ltEq, kp, keyslEq = Refl, keysrEq = Refl} in
@@ -132,7 +132,7 @@ mutual
       Element GT gtEq =>
         let (l', Evidence color' r') = insertRight k v k' v' l r {gtEq, kp, keyslEq = Refl, keysrEq = Refl} in
         BadRedNode k' v' l' r' {kp = MkInCons k keys kp}
-  insertG k v (BlackNode k' v' l r {kp, height = height', colorLeft, colorRight}) = case the (Subset Ordering (compare k k' ===)) $ Element (compare k k') Refl of
+  insertG' k v (BlackNode k' v' l r {kp, height = height', colorLeft, colorRight}) = case the (Subset Ordering (compare k k' ===)) $ Element (compare k k') Refl of
     Element LT ltEq =>
       case l of
         Empty _ =>
@@ -178,19 +178,19 @@ mutual
           balanceRight k' v' l' r' {kord, xkp = MkInCons _ _ kp}
 
 public export
-insertG' :
+insertG :
   {0 color : Color} ->
   (kord : LawfulOrd kt) =>
   (k : kt) ->
   vt k ->
   GoodTree {kt, height, color, kord, vt, keys} ->
   Exists \color' => Exists \height' => GoodTree {color = color', height = height', kt, kord, vt, keys = k :: keys}
-insertG' k v tree@(Empty Refl) =
-  let Evidence color' tree' = insertG k v tree in
+insertG k v tree@(Empty Refl) =
+  let Evidence color' tree' = insertG' k v tree in
   Evidence color' $ Evidence 0 tree'
-insertG' k v tree@(BlackNode _ _ _ _ {height = height'}) =
-  let Evidence color' tree' = insertG k v tree in
+insertG k v tree@(BlackNode _ _ _ _ {height = height'}) =
+  let Evidence color' tree' = insertG' k v tree in
   Evidence color' $ Evidence (S height') tree'
-insertG' k v tree@(RedNode _ _ _ _) =
-  let BadRedNode k' v' l r {height = height', kp} = insertG k v tree in
+insertG k v tree@(RedNode _ _ _ _) =
+  let BadRedNode k' v' l r {height = height', kp} = insertG' k v tree in
   Evidence Black $ Evidence (S height') $ BlackNode k' v' l r {kp}

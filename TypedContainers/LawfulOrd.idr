@@ -15,7 +15,9 @@ interface LawfulOrd a where
 
 public export
 interface LawfulOrd a => LawfullerOrd a where
-  0 realEquality : (x : a) -> (y : a) -> (compare x y = EQ) -> (x = y)
+  -- `compare` needs to be unambigious here because the name is
+  -- seemingly resolved where the instances are defined...
+  0 realEquality : (x : a) -> (y : a) -> (TypedContainers.LawfulOrd.compare x y = EQ) -> (x = y)
 
 public export
 (==) : LawfulOrd a => a -> a -> Bool

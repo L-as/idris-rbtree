@@ -14,12 +14,59 @@ LawfulOrd Nat where
   reversion1 Z Z p impossible
   reversion1 (S _) Z p impossible
   reversion1 Z (S _) p = Refl
-  reversion1 (S x) (S y) p = ?h1
+  reversion1 (S x) (S y) p =
+    let rec = reversion1 x y in
+    rec p
 
-  reversion2 x y p = ?h2
-  reversion3 x y p = ?h3
+  reversion2 Z Z p impossible
+  reversion2 (S _) Z p = Refl
+  reversion2 Z (S _) p impossible
+  reversion2 (S x) (S y) p =
+    let rec = reversion2 x y in
+    rec p
 
-  transitivity x y z p = ?h4
+  reversion3 Z Z p = Refl
+  reversion3 (S _) Z p impossible
+  reversion3 Z (S _) p impossible
+  reversion3 (S x) (S y) p =
+    let rec = reversion3 x y in
+    rec p
 
-  equality1 x y z p = ?h5
-  equality2 x y z p = ?h6
+  transitivity Z     Z     Z     p0 p1 impossible
+  transitivity Z     Z     (S z) p0 p1 impossible
+  transitivity Z     (S y) Z     p0 p1 impossible
+  transitivity Z     (S y) (S z) p0 p1 = Refl
+  transitivity (S x) Z     Z     p0 p1 impossible
+  transitivity (S x) Z     (S z) p0 p1 impossible
+  transitivity (S x) (S y) Z     p0 p1 impossible
+  transitivity (S x) (S y) (S z) p0 p1 =
+    let rec = transitivity x y z p0 p1 in
+    rec
+
+  equality1 Z     Z     z     p = Refl
+  equality1 Z     (S y) Z     p impossible
+  equality1 Z     (S y) (S z) p impossible
+  equality1 (S x) Z     Z     p impossible
+  equality1 (S x) Z     (S z) p impossible
+  equality1 (S x) (S y) Z     p = Refl
+  equality1 (S x) (S y) (S z) p =
+    let rec = equality1 x y z p in
+    rec
+
+  equality2 Z     Z     z     p = Refl
+  equality2 Z     (S y) Z     p impossible
+  equality2 Z     (S y) (S z) p impossible
+  equality2 (S x) Z     Z     p impossible
+  equality2 (S x) Z     (S z) p impossible
+  equality2 (S x) (S y) Z     p = Refl
+  equality2 (S x) (S y) (S z) p =
+    let rec = equality2 x y z p in
+    rec
+
+LawfullerOrd Nat where
+  realEquality Z Z p = Refl
+  realEquality Z (S _) p impossible
+  realEquality (S _) Z p impossible
+  realEquality (S x) (S y) p =
+    let rec = realEquality x y p in
+    cong S rec
